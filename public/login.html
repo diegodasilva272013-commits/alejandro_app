@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Círculo Azul Finanzas — Acceso</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0:#05080F; --bg1:#080E1A; --bg2:#0D1627; --bg3:#142035;
+    --gold1:#1A56C4; --gold2:#2E74E8; --gold3:#5A9BFF;
+    --silver1:#8FA8C8; --silver2:#B8CEEA; --silver3:#D8E6F5;
+    --white:#FFFFFF; --gray1:#C4D4EA; --gray2:#6A829E;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg0);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+  }
+
+  /* Fondo animado */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 55% at 65% 35%, rgba(26,86,196,.18) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 40% at 10% 80%, rgba(46,116,232,.10) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Línea lateral */
+  .sidebar-line {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, transparent, var(--gold1) 20%, var(--gold3) 50%, var(--silver2) 80%, transparent);
+    z-index: 10;
+  }
+
+  /* Grid decorativo fondo */
+  .geo {
+    position: fixed;
+    right: 6%;
+    top: 50%;
+    transform: translateY(-50%) rotate(10deg);
+    width: 500px; height: 500px;
+    border: 1px solid rgba(46,116,232,.06);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .geo::before {
+    content: '';
+    position: absolute;
+    inset: 55px;
+    border: 1px solid rgba(90,155,255,.04);
+  }
+  .geo::after {
+    content: '';
+    position: absolute;
+    inset: 115px;
+    border: 1px solid rgba(46,116,232,.04);
+    border-radius: 50%;
+  }
+
+  /* Partículas flotantes */
+  .particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: var(--gold3);
+    border-radius: 50%;
+    opacity: 0;
+    animation: float linear infinite;
+  }
+  @keyframes float {
+    0%   { opacity: 0; transform: translateY(0) translateX(0); }
+    10%  { opacity: .4; }
+    90%  { opacity: .2; }
+    100% { opacity: 0; transform: translateY(-80vh) translateX(20px); }
+  }
+
+  /* Contenedor principal */
+  .login-wrap {
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* Card */
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    background: rgba(8,14,26,.85);
+    border: 1px solid rgba(46,116,232,.25);
+    border-radius: 16px;
+    padding: 48px 44px 40px;
+    backdrop-filter: blur(24px);
+    box-shadow:
+      0 0 0 1px rgba(90,155,255,.06),
+      0 24px 64px rgba(0,0,0,.6),
+      0 0 80px rgba(26,86,196,.12);
+    animation: cardIn .5s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(24px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Logo */
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 36px;
+    justify-content: center;
+  }
+  .login-logo svg {
+    width: 52px; height: 52px;
+    filter: drop-shadow(0 0 16px rgba(46,116,232,.5));
+  }
+  .login-brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+  .login-brand-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: .03em;
+  }
+  .login-brand-sub {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .4em;
+    color: var(--silver1);
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* Divisor */
+  .login-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(46,116,232,.4), transparent);
+    margin-bottom: 32px;
+  }
+
+  /* Headline */
+  .login-headline {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .login-headline .tag {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .4em;
+    color: var(--gold3);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .login-headline h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: .01em;
+  }
+
+  /* Formulario */
+  .form-group {
+    margin-bottom: 16px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--silver1);
+    margin-bottom: 8px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(13,22,39,.8);
+    border: 1px solid rgba(46,116,232,.3);
+    border-radius: 8px;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .form-group input:focus {
+    border-color: var(--gold2);
+    box-shadow: 0 0 0 3px rgba(46,116,232,.15);
+  }
+  .form-group input::placeholder {
+    color: var(--gray2);
+  }
+
+  /* Botón */
+  .btn-login {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--gold1), #1A4FAA);
+    border: none;
+    border-radius: 8px;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all .22s;
+    box-shadow: 0 4px 20px rgba(26,86,196,.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-login::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.08), transparent);
+    opacity: 0;
+    transition: opacity .22s;
+  }
+  .btn-login:hover {
+    background: linear-gradient(135deg, var(--gold2), var(--gold1));
+    box-shadow: 0 6px 28px rgba(46,116,232,.45);
+    transform: translateY(-1px);
+  }
+  .btn-login:hover::after { opacity: 1; }
+  .btn-login:active { transform: translateY(0); }
+  .btn-login:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+  /* Error */
+  .login-error {
+    display: none;
+    background: rgba(192,57,43,.12);
+    border: 1px solid rgba(192,57,43,.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #e07060;
+    margin-bottom: 16px;
+    text-align: center;
+    animation: shake .35s;
+  }
+  .login-error.show { display: block; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%       { transform: translateX(-6px); }
+    75%       { transform: translateX(6px); }
+  }
+
+  /* Footer */
+  .login-footer {
+    text-align: center;
+    margin-top: 28px;
+    font-size: 10px;
+    color: var(--gray2);
+    letter-spacing: .08em;
+  }
+  .login-footer span {
+    color: var(--silver1);
+  }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="sidebar-line"></div>
+<div class="geo"></div>
+
+<!-- Partículas -->
+<div class="particles" id="particles"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <!-- Logo -->
+    <div class="login-logo">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="lg-circle" cx="50%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#5A9BFF"/>
+            <stop offset="100%" stop-color="#0D2870"/>
+          </radialGradient>
+          <radialGradient id="lg-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="rgba(90,155,255,0.35)"/>
+            <stop offset="100%" stop-color="rgba(13,40,112,0)"/>
+          </radialGradient>
+        </defs>
+        <circle cx="32" cy="32" r="31" fill="url(#lg-glow)"/>
+        <circle cx="32" cy="32" r="26" fill="url(#lg-circle)"/>
+        <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+        <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+        <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+        <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+        <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+        <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+        <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+      </svg>
+      <div class="login-brand">
+        <span class="login-brand-name">Círculo Azul</span>
+        <span class="login-brand-sub">Finanzas</span>
+      </div>
+    </div>
+
+    <div class="login-divider"></div>
+
+    <div class="login-headline">
+      <span class="tag">Acceso Institucional</span>
+      <h1>Bienvenido</h1>
+    </div>
+
+    <!-- Error -->
+    <div class="login-error" id="error-msg">Credenciales incorrectas. Intente nuevamente.</div>
+
+    <!-- Form -->
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Usuario</label>
+        <input type="text" id="username" placeholder="Ingrese su usuario" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-login" id="btn-submit">
+        Ingresar a la Plataforma
+      </button>
+    </form>
+
+    <div class="login-footer">
+      Análisis Cuantitativo Profesional &nbsp;·&nbsp; <span>Uso Exclusivo Interno</span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Partículas decorativas
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.bottom = '-10px';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.width = p.style.height = (1 + Math.random() * 2) + 'px';
+    container.appendChild(p);
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+    const errorEl = document.getElementById('error-msg');
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Verificando...';
+    errorEl.classList.remove('show');
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, pass })
+      });
+
+      if (res.ok) {
+        btn.innerHTML = '✓ Acceso concedido';
+        btn.style.background = 'linear-gradient(135deg, #1A8A4A, #0F5C32)';
+        setTimeout(() => { window.location.href = '/'; }, 600);
+      } else {
+        errorEl.classList.add('show');
+        // Re-trigger animation
+        errorEl.style.animation = 'none';
+        errorEl.offsetHeight;
+        errorEl.style.animation = '';
+        btn.disabled = false;
+        btn.innerHTML = 'Ingresar a la Plataforma';
+      }
+    } catch {
+      errorEl.textContent = 'Error de conexión. Intente nuevamente.';
+      errorEl.classList.add('show');
+      btn.disabled = false;
+      btn.innerHTML = 'Ingresar a la Plataforma';
+    }
+  }
+
+  // Foco automático
+  document.getElementById('username').focus();
+</script>
+</body>
+</html>

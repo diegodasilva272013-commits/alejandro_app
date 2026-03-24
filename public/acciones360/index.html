@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acciones 360 — Análisis Financiero Completo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <!-- CDN libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <!-- Optional: PDF.js for PDF parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   PALETA & VARIABLES
+═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --navy:    #0D1B3E;
+  --gold:    #C9A84C;
+  --teal:    #1A6B72;
+  --midblue: #1E3A5F;
+  --green:   #27AE60;
+  --orange:  #E67E22;
+  --red:     #C0392B;
+  --white:   #FFFFFF;
+  --gray1:   #F4F6F9;
+  --gray2:   #E8ECF2;
+  --gray3:   #4A5568;
+  --gold-bg: #FDF5E0;
+  --blue-bg: #D6E4F0;
+  --sidebar-w: 240px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  background: #05080F;
+  color: #8FA8C8;
+  min-height: 100vh;
+}
+
+/* ── TOPBAR / HEADER ────────────────────────────────────────────────────── */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 200;
+  background: var(--navy);
+  display: flex; align-items: center;
+  padding: 0 1.5rem; gap: 1rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+}
+.header-brand {
+  display: flex; align-items: center; gap: .6rem;
+  text-decoration: none;
+}
+.header-logo {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--gold), #a07830);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; font-weight: 700; color: #fff;
+  letter-spacing: -.02em;
+  flex-shrink: 0;
+}
+.header-name {
+  color: var(--gold);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem; font-weight: 700; letter-spacing: .04em;
+  white-space: nowrap;
+}
+.header-divider { width: 1px; height: 24px; background: rgba(255,255,255,.15); flex-shrink: 0; }
+.header-empresa {
+  color: rgba(255,255,255,.85);
+  font-size: .85rem; font-weight: 500;
+}
+.header-fecha {
+  color: rgba(255,255,255,.5);
+  font-size: .72rem; margin-left: auto;
+}
+.header-back-link {
+  color: rgba(255,255,255,.5);
+  font-size: .75rem; text-decoration: none;
+  transition: color .15s;
+  white-space: nowrap;
+}
+.header-back-link:hover { color: var(--gold); }
+.header-ca-brand {
+  display: flex; align-items: center; gap: .45rem;
+  text-decoration: none; flex-shrink: 0;
+}
+.header-ca-brand .topbar-brand-text { display:flex; flex-direction:column; line-height:1.1; }
+.header-ca-brand .topbar-brand-name { font-family:'Cormorant Garamond',serif; font-size:.9rem; font-weight:700; color:rgba(255,255,255,.85); letter-spacing:.04em; }
+.header-ca-brand .topbar-brand-sub  { font-size:.6rem; color:rgba(255,255,255,.4); letter-spacing:.1em; text-transform:uppercase; }
+.header-ca-brand:hover .topbar-brand-name { color:#fff; }
+
+/* topbar action buttons (visible in dashboard) */
+.topbar-actions {
+  display: flex; gap: .45rem; margin-left: auto; align-items: center;
+}
+.btn-topbar {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,.4);
+  color: var(--gold);
+  padding: .32rem .85rem;
+  border-radius: 6px;
+  font-size: .75rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+  letter-spacing: .02em;
+}
+.btn-topbar:hover { background: rgba(201,168,76,.12); }
+.btn-topbar.solid  { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.btn-topbar.solid:hover { background: #b8913e; }
+
+/* ── PANTALLA 1: UPLOAD ──────────────────────────────────────────────────── */
+#screen-upload {
+  min-height: 100vh;
+  background: var(--navy);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 1.5rem 3rem;
+}
+.upload-hero { text-align: center; margin-bottom: 2.5rem; }
+.upload-hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 700; color: #fff;
+  letter-spacing: .04em; line-height: 1.2;
+}
+.upload-hero-title span { color: var(--gold); }
+.upload-hero-sub {
+  color: rgba(255,255,255,.5);
+  font-size: .9rem; margin-top: .65rem;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+
+.upload-card {
+  background: rgba(255,255,255,.05);
+  border: 2px dashed rgba(201,168,76,.4);
+  border-radius: 16px;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  cursor: pointer;
+  max-width: 520px; width: 100%;
+  transition: border-color .2s, background .2s;
+}
+.upload-card:hover, .upload-card.drag-over {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.06);
+}
+.upload-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+.upload-title { color: #fff; font-size: 1.1rem; font-weight: 600; margin-bottom: .5rem; }
+.upload-sub { color: rgba(255,255,255,.45); font-size: .83rem; line-height: 1.5; }
+.upload-types {
+  display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.25rem;
+}
+.type-badge {
+  background: rgba(201,168,76,.15);
+  border: 1px solid rgba(201,168,76,.3);
+  color: var(--gold); font-size: .72rem; font-weight: 600;
+  padding: .2rem .65rem; border-radius: 99px; letter-spacing: .04em;
+}
+
+.or-divider {
+  color: rgba(255,255,255,.25); font-size: .8rem; margin: 1.5rem 0;
+  max-width: 520px; width: 100%;
+  display: flex; align-items: center; gap: 1rem;
+}
+.or-divider::before, .or-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.12);
+}
+
+.paste-panel {
+  max-width: 520px; width: 100%;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.paste-label { color: rgba(255,255,255,.6); font-size: .8rem; margin-bottom: .5rem; font-weight: 500; }
+.paste-textarea {
+  width: 100%; height: 130px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  color: rgba(255,255,255,.85);
+  font-size: .8rem; font-family: 'Space Mono', monospace;
+  padding: .75rem; resize: vertical;
+  outline: none;
+}
+.paste-textarea::placeholder { color: rgba(255,255,255,.25); }
+.paste-textarea:focus { border-color: rgba(201,168,76,.5); }
+.paste-actions {
+  display: flex; gap: .5rem; margin-top: .75rem; flex-wrap: wrap;
+}
+.btn-example {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.18);
+  color: rgba(255,255,255,.55);
+  padding: .38rem .85rem; border-radius: 6px;
+  font-size: .75rem; cursor: pointer; transition: all .15s;
+}
+.btn-example:hover { border-color: rgba(201,168,76,.5); color: var(--gold); }
+.btn-example.primary {
+  background: var(--gold); border-color: var(--gold); color: var(--navy);
+  font-weight: 700; margin-left: auto;
+}
+.btn-example.primary:hover { background: #b8913e; }
+
+/* ── PANTALLA 2: CONFIRMACIÓN ────────────────────────────────────────────── */
+#screen-confirm {
+  display: none;
+  min-height: 100vh; background: var(--navy);
+  align-items: center; justify-content: center;
+  padding: 80px 1.5rem 3rem;
+  flex-direction: column;
+}
+.confirm-card {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(201,168,76,.3);
+  border-radius: 16px; padding: 2.5rem 2rem;
+  max-width: 480px; width: 100%; text-align: center;
+}
+.confirm-icon { font-size: 3rem; margin-bottom: 1rem; }
+.confirm-sub { color: rgba(255,255,255,.45); font-size: .82rem; margin-bottom: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+.confirm-empresa {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.9rem; font-weight: 700; color: #fff;
+  margin-bottom: 1.5rem; line-height: 1.2;
+}
+.confirm-empresa span { color: var(--gold); }
+.confirm-meta { color: rgba(255,255,255,.4); font-size: .78rem; margin-bottom: 2rem; }
+.confirm-btns { display: flex; gap: .75rem; justify-content: center; }
+.btn-confirm {
+  padding: .65rem 1.75rem; border-radius: 8px; font-size: .9rem;
+  font-weight: 700; cursor: pointer; border: none; transition: all .15s;
+  letter-spacing: .02em;
+}
+.btn-confirm.yes { background: var(--gold); color: var(--navy); }
+.btn-confirm.yes:hover { background: #b8913e; }
+.btn-confirm.no  { background: rgba(255,255,255,.08); color: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.15); }
+.btn-confirm.no:hover  { background: rgba(255,255,255,.14); }
+
+/* ── PANTALLA 3: PROCESANDO ──────────────────────────────────────────────── */
+#screen-loading {
+  display: none;
+  min-height: 100vh; background: var(--navy);
+  align-items: center; justify-content: center;
+  flex-direction: column; padding: 80px 1.5rem 3rem;
+}
+.loading-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem; color: var(--gold); font-weight: 700;
+  margin-bottom: 2.5rem; letter-spacing: .05em;
+}
+.loading-bar-wrap {
+  width: 340px; max-width: 90vw;
+  height: 6px; background: rgba(255,255,255,.1); border-radius: 99px;
+  overflow: hidden; margin-bottom: 1.25rem;
+}
+.loading-bar {
+  height: 100%; width: 0; border-radius: 99px;
+  background: linear-gradient(90deg, var(--teal), var(--gold));
+  transition: width .4s ease;
+}
+.loading-msg {
+  color: rgba(255,255,255,.55); font-size: .85rem;
+  letter-spacing: .04em; min-height: 1.4em;
+}
+.loading-steps { margin-top: 2rem; display: flex; flex-direction: column; gap: .5rem; width: 340px; max-width: 90vw; }
+.step-item {
+  display: flex; align-items: center; gap: .6rem;
+  color: rgba(255,255,255,.3); font-size: .78rem; transition: color .3s;
+}
+.step-item.done { color: var(--green); }
+.step-item.active { color: #fff; }
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,.15); flex-shrink: 0; transition: background .3s;
+}
+.step-item.done .step-dot { background: var(--green); }
+.step-item.active .step-dot { background: var(--gold); }
+
+/* ── PANTALLA 4: DASHBOARD ───────────────────────────────────────────────── */
+#screen-dashboard { display: none; }
+
+.dash-layout {
+  display: flex;
+  padding-top: 56px;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.dash-sidebar {
+  position: fixed;
+  top: 56px; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--navy);
+  overflow-y: auto; z-index: 100;
+  padding: 1.25rem 0;
+  border-right: 1px solid rgba(255,255,255,.06);
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,.2) transparent;
+}
+.nav-section-title {
+  color: rgba(255,255,255,.3);
+  font-size: .65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .1em;
+  padding: .75rem 1.25rem .3rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: .55rem;
+  padding: .52rem 1.25rem;
+  color: rgba(255,255,255,.5);
+  font-size: .8rem; cursor: pointer;
+  transition: all .15s; border-left: 3px solid transparent;
+  text-decoration: none;
+}
+.nav-item:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.04); }
+.nav-item.active {
+  color: var(--gold); font-weight: 600;
+  border-left-color: var(--gold);
+  background: rgba(201,168,76,.08);
+}
+.nav-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0; opacity: .6;
+}
+
+/* Sidebar score counts */
+.nav-counts {
+  padding: .75rem 1.25rem;
+  margin-top: .5rem;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.nc-row { display: flex; justify-content: space-between; align-items: center; padding: .2rem 0; font-size: .75rem; }
+.nc-label { color: rgba(255,255,255,.4); }
+.nc-val { font-weight: 700; font-size: .8rem; }
+
+.nav-export-btns {
+  padding: .75rem 1rem;
+  display: flex; flex-direction: column; gap: .4rem;
+  border-top: 1px solid rgba(255,255,255,.06);
+  margin-top: .5rem;
+}
+.btn-export {
+  width: 100%; padding: .5rem .75rem; border-radius: 7px;
+  font-size: .78rem; font-weight: 600; cursor: pointer; border: none;
+  transition: background .15s; text-align: center;
+}
+.btn-export.pdf { background: var(--red); color: #fff; }
+.btn-export.pdf:hover { background: #a52d22; }
+.btn-export.word { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.12); }
+.btn-export.word:hover { background: rgba(255,255,255,.14); }
+.btn-export.save { background: rgba(201,168,76,.15); color: var(--gold); border: 1px solid rgba(201,168,76,.3); }
+.btn-export.save:hover { background: rgba(201,168,76,.25); }
+
+/* Main content */
+.dash-main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  padding: 1.75rem 2rem 4rem;
+  max-width: calc(100vw - var(--sidebar-w));
+}
+
+/* ── KPI Grid ────────────────────────────────────────────────────────────── */
+.section-block {
+  background: #080E1A;
+  border: 1px solid rgba(26,86,196,.2);
+  border-radius: 12px;
+  box-shadow: 0 4px 28px rgba(5,8,15,.55);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+.section-block-title {
+  background: rgba(13,22,39,.98);
+  color: #5A9BFF;
+  padding: .85rem 1.25rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem; font-weight: 700; letter-spacing: .04em;
+  border-bottom: 1px solid rgba(26,86,196,.2);
+}
+.section-block-body { padding: 1.25rem; background: #080E1A; }
+
+#warn-box {
+  display: none;
+  background: rgba(214,137,16,.1); border: 1px solid rgba(214,137,16,.4);
+  border-radius: 8px; padding: .75rem 1rem;
+  color: #D68910; font-size: .8rem; margin-bottom: 1rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: .9rem;
+}
+.kpi-card {
+  background: #0D1627;
+  border-radius: 10px; padding: 1rem;
+  border-left: 4px solid #1A8A4A;
+  border-top: 1px solid rgba(26,86,196,.18);
+  border-right: 1px solid rgba(26,86,196,.12);
+  border-bottom: 1px solid rgba(26,86,196,.12);
+  transition: box-shadow .2s, border-left-color .2s;
+}
+.kpi-card:hover { box-shadow: 0 4px 20px rgba(5,8,15,.6); }
+.kpi-num {
+  font-size: 1.65rem; font-weight: 800;
+  color: #5A9BFF; line-height: 1;
+  margin-bottom: .3rem;
+}
+.kpi-label { font-size: .75rem; color: #8FA8C8; font-weight: 500; margin-bottom: .4rem; }
+.kpi-badge {
+  display: inline-block;
+  background: rgba(26,138,74,.25); color: #27C06A;
+  border: 1px solid rgba(26,138,74,.4);
+  font-size: .65rem; font-weight: 700;
+  padding: .15rem .5rem; border-radius: 99px;
+  letter-spacing: .04em;
+}
+
+/* ── Indicator Cards ─────────────────────────────────────────────────────── */
+.indicator-card {
+  border: 1px solid rgba(26,86,196,.2);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  background: #0D1627;
+  box-shadow: 0 2px 12px rgba(5,8,15,.4);
+}
+.ic-header {
+  background: rgba(5,8,15,.6);
+  color: #B8CEEA;
+  padding: .7rem 1rem;
+  display: flex; align-items: center; gap: .75rem;
+  border-bottom: 1px solid rgba(26,86,196,.2);
+}
+.ic-num {
+  font-family: 'Space Mono', monospace;
+  font-size: .72rem; font-weight: 700;
+  color: #5A9BFF; letter-spacing: .05em;
+  background: rgba(26,86,196,.18);
+  padding: .15rem .45rem; border-radius: 4px;
+  flex-shrink: 0;
+}
+.ic-name { font-weight: 600; font-size: .9rem; color: #D8E6F5; }
+.ic-formula {
+  background: rgba(26,138,127,.08);
+  padding: .55rem 1rem;
+  font-size: .78rem; color: #4BC8BF;
+  border-left: 3px solid rgba(26,138,127,.4);
+  border-bottom: 1px solid rgba(26,86,196,.12);
+}
+.ic-result {
+  padding: .55rem 1rem;
+  font-size: .82rem; color: #8FA8C8;
+  border-bottom: 1px solid rgba(26,86,196,.12);
+}
+.ic-lectura {
+  padding: .55rem 1rem;
+  font-size: .82rem; color: #8FA8C8;
+  border-bottom: 1px solid rgba(26,86,196,.08);
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+}
+.ic-badge {
+  display: inline-block;
+  font-size: .66rem; font-weight: 700;
+  padding: .15rem .55rem; border-radius: 99px;
+  letter-spacing: .05em; white-space: nowrap;
+}
+.ic-tendencia {
+  padding: .5rem 1rem;
+  font-size: .77rem; color: #6A829E;
+  background: rgba(5,8,15,.3);
+}
+.ic-label { font-weight: 600; color: #5A9BFF; margin-right: .3rem; }
+
+/* Chart blocks */
+.chart-block {
+  background: #080E1A;
+  border: 1px solid rgba(26,86,196,.25);
+  border-radius: 12px; margin-bottom: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(5,8,15,.5);
+}
+.chart-block-title {
+  background: rgba(13,22,39,.95);
+  color: #5A9BFF;
+  border-bottom: 1px solid rgba(26,86,196,.25);
+  padding: .7rem 1.1rem;
+  font-size: .85rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.chart-wrap {
+  height: 290px; padding: 1rem;
+  position: relative;
+  background: #080E1A;
+}
+
+/* ── Resumen Final ─────────────────────────────────────────────────────── */
+.resumen-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;
+}
+@media (max-width: 640px) { .resumen-cols { grid-template-columns: 1fr; } }
+.resumen-box {
+  border-radius: 10px; padding: 1rem; border: 1px solid;
+}
+.resumen-box.green { background: rgba(26,138,74,.08); border-color: rgba(26,138,74,.35); }
+.resumen-box.orange { background: rgba(214,137,16,.08); border-color: rgba(214,137,16,.35); }
+.resumen-box-title {
+  font-weight: 700; font-size: .85rem; margin-bottom: .75rem;
+}
+.resumen-item { font-size: .8rem; padding: .3rem 0; border-bottom: 1px solid rgba(26,86,196,.1); color: #8FA8C8; }
+.resumen-item:last-child { border-bottom: none; }
+.green-item { color: #27C06A; }
+.orange-item { color: #D68910; }
+
+.score-row {
+  display: flex; gap: 1rem; align-items: stretch; flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.score-card {
+  background: #0D1627;
+  border: 1px solid rgba(26,86,196,.25);
+  color: #D8E6F5;
+  border-radius: 10px; padding: 1rem 1.25rem;
+  text-align: center; flex: 1; min-width: 100px;
+  box-shadow: 0 2px 12px rgba(5,8,15,.4);
+}
+.score-big { font-size: 1.6rem; font-weight: 800; color: #5A9BFF; }
+.score-lbl { font-size: .7rem; color: #6A829E; margin-top: .2rem; letter-spacing: .04em; }
+
+.conclusion-box {
+  background: var(--navy);
+  border: 2px solid var(--gold);
+  border-radius: 12px; padding: 1.25rem 1.5rem;
+}
+.conclusion-box-title {
+  color: var(--gold); font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem; font-weight: 700; letter-spacing: .04em; margin-bottom: .65rem;
+}
+#conclusion-text { color: rgba(255,255,255,.8); font-size: .85rem; line-height: 1.7; }
+
+/* ── Toast / Historial / Config panels ──────────────────────────────────── */
+#a360-share-toast {
+  position: fixed; bottom: 2.5rem; left: 50%;
+  transform: translateX(-50%) translateY(2rem);
+  background: rgba(13,27,62,.97); color: #fff;
+  padding: .55rem 1.5rem; border-radius: 99px;
+  font-size: .82rem; font-weight: 600; letter-spacing: .02em;
+  opacity: 0; transition: opacity .3s, transform .3s;
+  z-index: 99999; pointer-events: none; white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  border: 1px solid rgba(201,168,76,.3);
+}
+
+/* Slide-in panels */
+.panel-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); z-index: 9998;
+  backdrop-filter: blur(3px);
+}
+.slide-panel {
+  position: fixed; top: 0; right: -460px; width: 440px; height: 100vh;
+  background: #080E1A; z-index: 9999;
+  border-left: 1px solid rgba(26,86,196,.25);
+  display: flex; flex-direction: column;
+  transition: right .3s cubic-bezier(.4,0,.2,1);
+  box-shadow: -8px 0 40px rgba(5,8,15,.7);
+}
+.slide-panel-header {
+  background: var(--navy); color: #fff;
+  padding: 1rem 1.25rem;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.slide-panel-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 700; }
+.slide-panel-close {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.7); width: 30px; height: 30px; border-radius: 50%;
+  cursor: pointer; font-size: .85rem; display: flex; align-items: center; justify-content: center;
+}
+.slide-panel-body { flex: 1; overflow-y: auto; padding: 1.1rem; scrollbar-width: thin; background: #080E1A; color: #8FA8C8; }
+
+.hist-entry {
+  border: 1px solid rgba(26,86,196,.2); border-radius: 8px;
+  padding: .75rem 1rem; margin-bottom: .55rem;
+  background: #0D1627;
+  display: flex; align-items: flex-start; gap: .75rem;
+}
+.hist-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: .3rem; }
+.hist-info { flex: 1; min-width: 0; }
+.hist-empresa { font-weight: 600; font-size: .88rem; color: #B8CEEA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-date { font-size: .7rem; color: #6A829E; margin-top: .1rem; }
+.hist-meta { font-size: .72rem; color: #4BC8BF; margin-top: .2rem; }
+.hist-btns { display: flex; flex-direction: column; gap: .3rem; flex-shrink: 0; }
+.hist-btn {
+  font-size: .7rem; font-weight: 600; padding: .25rem .65rem;
+  border-radius: 5px; cursor: pointer; border: none; white-space: nowrap;
+}
+.hist-btn.load { background: var(--navy); color: #fff; }
+.hist-btn.del  { background: #FDECEA; color: var(--red); border: 1px solid rgba(192,57,43,.2); }
+
+/* Section config checkboxes */
+.config-item {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .5rem .4rem; border-radius: 6px; cursor: pointer;
+  transition: background .15s; margin-bottom: .1rem;
+}
+.config-item:hover { background: rgba(26,86,196,.12); }
+.config-item input { accent-color: #5A9BFF; width: 15px; height: 15px; cursor: pointer; }
+.config-item-label { font-size: .83rem; color: #8FA8C8; }
+
+@media (max-width: 768px) {
+  .dash-sidebar { display: none; }
+  .dash-main { margin-left: 0; max-width: 100vw; padding: 1rem; }
+  .slide-panel { width: min(440px, 95vw); }
+}
+
+/* ── PDF VIEWER SCREEN ───────────────────────────────────────────────────── */
+.pdf-topbar {
+  position: fixed; top: 56px; left: 0; right: 0; z-index: 150;
+  height: 52px;
+  background: #080E1A;
+  border-bottom: 1px solid rgba(26,86,196,.3);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem; gap: 1rem;
+  box-shadow: 0 2px 16px rgba(5,8,15,.6);
+}
+.pdf-topbar-left { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.pdf-topbar-icon { font-size: 1.1rem; flex-shrink: 0; }
+.pdf-topbar-name {
+  color: #D8E6F5; font-weight: 600; font-size: .88rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 380px;
+}
+.pdf-topbar-pages {
+  color: #6A829E; font-size: .75rem; white-space: nowrap; flex-shrink: 0;
+}
+.pdf-topbar-right { display: flex; gap: .5rem; flex-shrink: 0; }
+.btn-pdf-cancel {
+  background: transparent; border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.55); padding: .35rem .9rem;
+  border-radius: 6px; font-size: .78rem; cursor: pointer; transition: all .15s;
+}
+.btn-pdf-cancel:hover { border-color: rgba(192,57,43,.5); color: #C0392B; }
+.btn-pdf-analyze {
+  background: #5A9BFF; color: #05080F;
+  border: none; padding: .35rem 1.1rem;
+  border-radius: 6px; font-size: .78rem; font-weight: 700;
+  cursor: pointer; transition: background .15s; white-space: nowrap;
+  letter-spacing: .02em;
+}
+.btn-pdf-analyze:hover { background: #2E74E8; }
+.btn-pdf-analyze:disabled { background: rgba(90,155,255,.3); color: rgba(5,8,15,.5); cursor: not-allowed; }
+
+.pdf-pages-wrap {
+  flex: 1;
+  min-height: 0;          /* enables overflow-y scroll inside flexbox */
+  overflow-y: auto;
+  padding: 1.5rem 1rem 3rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
+  scrollbar-width: thin; scrollbar-color: rgba(90,155,255,.3) transparent;
+}
+.pdf-page-wrap {
+  width: 100%; max-width: 860px;
+}
+.pdf-page-num {
+  color: #6A829E; font-size: .72rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase;
+  margin-bottom: .5rem; padding-left: .25rem;
+}
+.pdf-page-canvas {
+  display: block;
+  width: 100%; height: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(26,86,196,.25);
+  box-shadow: 0 8px 40px rgba(5,8,15,.7);
+  background: #fff;
+}
+.pdf-loading-indicator {
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  padding: 4rem 2rem;
+}
+.pdf-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(90,155,255,.15);
+  border-top-color: #5A9BFF;
+  border-radius: 50%;
+  animation: pdf-spin .8s linear infinite;
+}
+@keyframes pdf-spin { to { transform: rotate(360deg); } }
+@keyframes spin360 { to { transform: rotate(360deg); } }
+.pdf-loading-text { color: #6A829E; font-size: .85rem; letter-spacing: .04em; }
+</style>
+</head>
+<body>
+
+<!-- ════ TOPBAR ════════════════════════════════════════════════════════════ -->
+<header class="app-header" id="app-header">
+  <a href="/" class="header-ca-brand" title="Volver al menú principal">
+    <svg class="topbar-logo-icon" width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="tbcircle" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stop-color="#5A9BFF"/>
+          <stop offset="100%" stop-color="#0D2870"/>
+        </radialGradient>
+        <radialGradient id="tbglow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(90,155,255,0.35)"/>
+          <stop offset="100%" stop-color="rgba(13,40,112,0)"/>
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="31" fill="url(#tbglow)"/>
+      <circle cx="32" cy="32" r="26" fill="url(#tbcircle)"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+      <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+      <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+      <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+      <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+    </svg>
+    <div class="topbar-brand-text">
+      <span class="topbar-brand-name">Círculo Azul</span>
+      <span class="topbar-brand-sub">Finanzas</span>
+    </div>
+  </a>
+  <div class="header-divider"></div>
+  <div class="header-brand">
+    <div class="header-logo">360</div>
+    <span class="header-name">Acciones 360</span>
+  </div>
+  <div class="header-divider" id="hdr-div2" style="display:none"></div>
+  <span class="header-empresa" id="header-empresa" style="display:none"></span>
+  <span class="header-fecha"   id="header-fecha"></span>
+  <div class="topbar-actions" id="topbar-actions" style="display:none">
+    <button class="btn-topbar" onclick="openA360Hist()">📋 Historial</button>
+    <button class="btn-topbar" onclick="saveA360Analisis()">💾 Guardar</button>
+    <button class="btn-topbar" onclick="shareA360Analisis()">🔗 Compartir</button>
+    <button class="btn-topbar" onclick="openA360Config()">⚙ Secciones</button>
+    <button class="btn-topbar compare-btn" id="btn-comparar" onclick="openComparePanel()">⚖ Comparar</button>
+    <button class="btn-topbar" id="btn-ver-pdf" onclick="verA360PDF()" title="Ver el documento PDF original">👁 Ver PDF</button>
+    <button class="btn-topbar solid" onclick="exportPDF()">⬇ PDF</button>
+  </div>
+</header>
+
+<!-- ════ PANTALLA 1 — UPLOAD ════════════════════════════════════════════════ -->
+<div id="screen-upload">
+  <div class="upload-hero">
+    <div class="upload-hero-title">ANÁLISIS FINANCIERO <span>360°</span></div>
+    <div class="upload-hero-sub">43 indicadores · 9 gráficas · reporte exportable</div>
+  </div>
+
+  <!-- Drop zone -->
+  <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="upload-icon">📊</div>
+    <div class="upload-title">Arrastrar o seleccionar archivo</div>
+    <div class="upload-sub">Subí el archivo con los datos financieros de la empresa<br>y el sistema analiza los 43 indicadores automáticamente.</div>
+    <div class="upload-types">
+      <span class="type-badge">.DOCX</span>
+      <span class="type-badge">.XLSX</span>
+      <span class="type-badge">.CSV</span>
+      <span class="type-badge">.PDF</span>
+    </div>
+    <input type="file" id="file-input" accept=".docx,.xlsx,.xls,.csv,.pdf" style="display:none">
+  </div>
+
+  <div class="or-divider">O PEGÁ LOS DATOS DIRECTAMENTE</div>
+
+  <div class="paste-panel">
+    <div id="ca-search-a360"></div>
+    <div class="paste-label">O pegá texto con los datos financieros</div>
+    <textarea id="paste-area" class="paste-textarea"
+      placeholder="Empresa: Duolingo Inc.
+TICKER: DUOL
+Ingresos  $964.3M
+EBIT  $111.6M
+Ganancia Neta  $183.0M
+ROE  36.2%  ROA  7.8%  ROIC  8.6%
+..."></textarea>
+    <div class="paste-actions">
+      <button class="btn-example" onclick="loadA360Example()">📝 Ejemplo</button>
+      <button class="btn-example" onclick="openA360Hist()">📋 Historial</button>
+      <button class="btn-example" onclick="document.getElementById('paste-area').value=''">🗑 Limpiar</button>
+      <button class="btn-example primary" onclick="runManualA360()">ANALIZAR →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PANTALLA 2 — CONFIRMACIÓN ══════════════════════════════════════════ -->
+<div id="screen-confirm" style="display:none;flex-direction:column;min-height:100vh;background:var(--navy);align-items:center;justify-content:center;padding:80px 1.5rem 3rem">
+  <div class="confirm-card">
+    <div class="confirm-icon">🏢</div>
+    <div class="confirm-sub">Empresa detectada</div>
+    <div class="confirm-empresa">¿Analizamos <span id="confirm-name">—</span>?</div>
+    <div class="confirm-meta" id="confirm-meta"></div>
+    <div class="confirm-btns">
+      <button class="btn-confirm no" onclick="resetA360()">← Volver</button>
+      <button class="btn-confirm yes" onclick="confirmAndRun()">CONFIRMAR →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PANTALLA PDF — VISOR DE DOCUMENTO ══════════════════════════════════ -->
+<div id="screen-pdf" style="display:none; position:fixed; inset:0; overflow:hidden; background:#05080F; flex-direction:column; z-index:90; padding-top:calc(56px + 52px);">
+  <div class="pdf-topbar">
+    <div class="pdf-topbar-left">
+      <span class="pdf-topbar-icon">📄</span>
+      <span class="pdf-topbar-name" id="pdf-preview-name">documento.pdf</span>
+      <span class="pdf-topbar-pages" id="pdf-preview-pages"></span>
+    </div>
+    <div class="pdf-topbar-right">
+      <button class="btn-pdf-cancel" onclick="cancelPdfPreview()">← Cancelar</button>
+      <button class="btn-pdf-analyze" id="btn-pdf-analyze" onclick="analyzePdf()">ANALIZAR ESTE DOCUMENTO →</button>
+    </div>
+  </div>
+  <div id="pdf-pages-wrap" class="pdf-pages-wrap">
+    <div id="pdf-loading-indicator" class="pdf-loading-indicator">
+      <div class="pdf-spinner"></div>
+      <div class="pdf-loading-text">Renderizando documento...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PANTALLA 3 — PROCESANDO ════════════════════════════════════════════ -->
+<div id="screen-loading" style="display:none;min-height:100vh;background:var(--navy);align-items:center;justify-content:center;flex-direction:column;padding:80px 1.5rem 3rem">
+  <div class="loading-logo">Acciones 360 — Analizando</div>
+  <div class="loading-bar-wrap">
+    <div class="loading-bar" id="loading-bar"></div>
+  </div>
+  <div class="loading-msg" id="loading-msg">Iniciando...</div>
+  <div class="loading-steps">
+    <div class="step-item" id="step-1"><div class="step-dot"></div>Leyendo datos financieros</div>
+    <div class="step-item" id="step-2"><div class="step-dot"></div>Calculando 43 indicadores</div>
+    <div class="step-item" id="step-3"><div class="step-dot"></div>Generando 9 gráficas</div>
+    <div class="step-item" id="step-4"><div class="step-dot"></div>Construyendo reporte</div>
+  </div>
+</div>
+
+<!-- ════ PANTALLA 4 — DASHBOARD ══════════════════════════════════════════════ -->
+<div id="screen-dashboard" style="display:none">
+  <div class="dash-layout">
+
+    <!-- Sidebar -->
+    <nav class="dash-sidebar" id="dash-sidebar">
+      <div class="nav-section-title">NAVEGACIÓN</div>
+      <a class="nav-item active" id="nav-resumen"     href="#sec-resumen"     onclick="activateNav('nav-resumen')">     <span class="nav-dot"></span> Resumen Ejecutivo</a>
+      <a class="nav-item"       id="nav-rentabilidad" href="#sec-bloque-i"    onclick="activateNav('nav-rentabilidad')"><span class="nav-dot"></span> I — Rentabilidad</a>
+      <a class="nav-item"       id="nav-retornos"     href="#sec-bloque-ii"   onclick="activateNav('nav-retornos')">    <span class="nav-dot"></span> II — Retornos Capital</a>
+      <a class="nav-item"       id="nav-cashflow"     href="#sec-bloque-iii"  onclick="activateNav('nav-cashflow')">    <span class="nav-dot"></span> III — Flujo de Caja</a>
+      <a class="nav-item"       id="nav-deuda"        href="#sec-bloque-iv"   onclick="activateNav('nav-deuda')">       <span class="nav-dot"></span> IV — Deuda y Liquidez</a>
+      <a class="nav-item"       id="nav-valoracion"   href="#sec-bloque-v"    onclick="activateNav('nav-valoracion')">  <span class="nav-dot"></span> V — Valoración</a>
+      <a class="nav-item"       id="nav-crecimiento"  href="#sec-bloque-vi"   onclick="activateNav('nav-crecimiento')"> <span class="nav-dot"></span> VI — Crecimiento</a>
+      <a class="nav-item"       id="nav-contexto"     href="#sec-bloque-vii"  onclick="activateNav('nav-contexto')">    <span class="nav-dot"></span> VII — Contexto y Calidad</a>
+      <a class="nav-item"       id="nav-scoring"      href="#sec-bloque-viii" onclick="activateNav('nav-scoring')">     <span class="nav-dot"></span> VIII — Scoring</a>
+      <a class="nav-item"       id="nav-xx"           href="#sec-bloque-xx"   onclick="activateNav('nav-xx')">          <span class="nav-dot"></span> XX — Comparativa</a>
+      <a class="nav-item"       id="nav-futuro"       href="#sec-bloque-ae"   onclick="activateNav('nav-futuro')">      <span class="nav-dot"></span> A–E — Futuro</a>
+      <a class="nav-item"       id="nav-cf"           href="#sec-bloque-cf"   onclick="activateNav('nav-cf')">          <span class="nav-dot"></span> CF — Calidad FCF</a>
+      <a class="nav-item"       id="nav-fwd"          href="#sec-bloque-fwd"  onclick="activateNav('nav-fwd')">         <span class="nav-dot"></span> FWD — Forward</a>
+      <a class="nav-item"       id="nav-final"        href="#sec-final"       onclick="activateNav('nav-final')">       <span class="nav-dot"></span> ★ Resumen Final</a>
+
+      <div class="nav-counts" id="nav-counts">
+        <div class="nav-section-title" style="padding:0 0 .5rem">SEMÁFORO</div>
+        <div class="nc-row"><span class="nc-label">✅ Excelente</span>   <span class="nc-val" id="count-green"  style="color:var(--green)">—</span></div>
+        <div class="nc-row"><span class="nc-label">🔵 Bueno</span>        <span class="nc-val" id="count-teal"   style="color:var(--teal)">—</span></div>
+        <div class="nc-row"><span class="nc-label">🟠 Moderado</span>     <span class="nc-val" id="count-orange" style="color:var(--orange)">—</span></div>
+        <div class="nc-row"><span class="nc-label">🔴 Crítico</span>      <span class="nc-val" id="count-red"    style="color:var(--red)">—</span></div>
+        <div class="nc-row"><span class="nc-label">⚫ Sin dato</span>     <span class="nc-val" id="count-gray"   style="color:var(--gray3)">—</span></div>
+      </div>
+
+      <div class="nav-export-btns">
+        <button class="btn-export pdf"  onclick="exportPDF()">⬇ Descargar PDF</button>
+        <button class="btn-export word" onclick="exportWord()">⬇ Descargar Word</button>
+        <button class="btn-export save" onclick="saveA360Analisis()">💾 Guardar análisis</button>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="dash-main" id="dash-main">
+
+      <!-- Resumen Ejecutivo -->
+      <div class="section-block" id="sec-resumen">
+        <div class="section-block-title">📋 Resumen Ejecutivo</div>
+        <div class="section-block-body">
+          <div id="warn-box"></div>
+          <div class="score-row" id="score-row">
+            <div class="score-card"><div class="score-big" id="score-badge">—</div><div class="score-lbl">Salud Financiera</div></div>
+          </div>
+          <div class="kpi-grid" id="kpi-grid"></div>
+        </div>
+      </div>
+
+      <!-- Comparación de empresas (visible solo cuando hay 2 análisis) -->
+      <div id="sec-compare" class="section-block" style="display:none">
+        <div class="section-block-title">⚖ COMPARACIÓN DE EMPRESAS</div>
+        <div class="section-block-body">
+          <div id="compare-header-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem"></div>
+          <div id="compare-table-wrap"></div>
+          <div id="compare-ia-wrap" style="display:none;margin-top:1.5rem;background:rgba(90,155,255,.05);border:1px solid rgba(90,155,255,.18);border-radius:10px;padding:1.2rem">
+            <div style="font-size:.8rem;font-weight:700;color:#5A9BFF;letter-spacing:.08em;margin-bottom:.8rem">ANÁLISIS IA — COMPARACIÓN</div>
+            <div id="compare-ia-text" style="font-size:.83rem;color:var(--gray2);line-height:1.7"></div>
+          </div>
+          <button onclick="closeCompare()" style="margin-top:1rem;background:transparent;border:1px solid var(--border);color:var(--gray3);padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-size:.78rem">Cerrar comparación ✕</button>
+        </div>
+      </div>
+
+      <!-- Indicadores por bloque -->
+      <div id="sec-bloque-i"   class="section-block"><div class="section-block-title">I — RENTABILIDAD (01–05)</div>     <div class="section-block-body" id="bloque-i-body"></div></div>
+      <div id="sec-bloque-ii"  class="section-block"><div class="section-block-title">II — RETORNOS SOBRE CAPITAL (06–10)</div><div class="section-block-body" id="bloque-ii-body"></div></div>
+      <div id="sec-bloque-iii" class="section-block"><div class="section-block-title">III — FLUJO DE CAJA (11–15)</div>  <div class="section-block-body" id="bloque-iii-body"></div></div>
+      <div id="sec-bloque-iv"  class="section-block"><div class="section-block-title">IV — DEUDA Y LIQUIDEZ (16–20)</div><div class="section-block-body" id="bloque-iv-body"></div></div>
+      <div id="sec-bloque-v"   class="section-block"><div class="section-block-title">V — VALORACIÓN (21–27)</div>      <div class="section-block-body" id="bloque-v-body"></div></div>
+      <div id="sec-bloque-vi"  class="section-block"><div class="section-block-title">VI — CRECIMIENTO (28–30)</div>    <div class="section-block-body" id="bloque-vi-body"></div></div>
+      <div id="sec-bloque-vii" class="section-block"><div class="section-block-title">VII — CONTEXTO Y CALIDAD (31–35)</div><div class="section-block-body" id="bloque-vii-body"></div></div>
+      <div id="sec-bloque-viii"class="section-block"><div class="section-block-title">VIII — SCORING COMPUESTO (35)</div><div class="section-block-body" id="bloque-viii-body"></div></div>
+      <div id="sec-bloque-xx"  class="section-block"><div class="section-block-title">XX — COMPARATIVA SECTORIAL</div>  <div class="section-block-body" id="bloque-xx-body"></div></div>
+      <div id="sec-bloque-ae"  class="section-block"><div class="section-block-title">A–E — SCORING Y PROYECCIONES</div><div class="section-block-body" id="bloque-ae-body"></div></div>
+      <div id="sec-bloque-cf"  class="section-block"><div class="section-block-title">CF — CALIDAD DE FLUJO DE CAJA</div><div class="section-block-body" id="bloque-cf-body"></div><div style="font-size:.74rem;color:var(--gray3);padding:.4rem .8rem .8rem;line-height:1.5">CF6 (Book-to-Bill) y CF7 (Backlog) requieren datos operativos del sector. Ingrésalos en el archivo como <code>book_to_bill: 1.2</code> o <code>backlog: 500</code>.</div></div>
+      <div id="sec-bloque-fwd" class="section-block"><div class="section-block-title">FWD — INDICADORES FORWARD</div><div class="section-block-body" id="bloque-fwd-body"></div><div style="font-size:.74rem;color:var(--gray3);padding:.4rem .8rem .8rem;line-height:1.5">FWD3 (FCF Forecast) requiere entrada manual. Ingrésalo como <code>fcf_forecast: 800</code>. FWD2 (Forward P/E) se calcula con <code>per_fwd</code> o precio + Forward EPS.</div></div>
+
+      <!-- Resumen Final -->
+      <div class="section-block" id="sec-final">
+        <div class="section-block-title">★ Resumen Final — Cuadro de Situación</div>
+        <div class="section-block-body">
+          <div class="resumen-cols">
+            <div class="resumen-box green">
+              <div class="resumen-box-title" style="color:var(--green)">✅ Fortalezas</div>
+              <div id="fortalezas-list"></div>
+            </div>
+            <div class="resumen-box orange">
+              <div class="resumen-box-title" style="color:var(--orange)">⚠ Alertas</div>
+              <div id="alertas-list"></div>
+            </div>
+          </div>
+          <div class="conclusion-box">
+            <div class="conclusion-box-title">CONCLUSIÓN OPERATIVA</div>
+            <div id="conclusion-text"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── PDF Toast ─────────────────────────────────────────────────────────── -->
+<div id="a360-pdf-toast" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(5,8,15,.85);align-items:center;justify-content:center;flex-direction:column;gap:1rem">
+  <div style="width:44px;height:44px;border:3px solid rgba(90,155,255,.15);border-top-color:#5A9BFF;border-radius:50%;animation:pdf-spin .8s linear infinite"></div>
+  <div style="color:#B8CEEA;font-size:.9rem;font-weight:600;letter-spacing:.04em">Generando PDF...</div>
+</div>
+<!-- ── Share Toast ─────────────────────────────────────────────────────────── -->
+<div id="a360-share-toast">✓ Acción completada</div>
+
+<!-- ── Historial panel ────────────────────────────────────────────────────── -->
+<div class="panel-overlay" id="a360-hist-overlay" onclick="closeA360Hist()"></div>
+<div class="slide-panel" id="a360-hist-panel">
+  <div class="slide-panel-header">
+    <div class="slide-panel-title">📋 Historial Acciones 360</div>
+    <button class="slide-panel-close" onclick="closeA360Hist()">✕</button>
+  </div>
+  <div class="slide-panel-body" id="a360-hist-list"></div>
+</div>
+
+<!-- ── Compare panel ──────────────────────────────────────────────────────── -->
+<div class="panel-overlay" id="compare-overlay" onclick="closeComparePanel()"></div>
+<div class="slide-panel" id="compare-panel" style="width:420px;right:-440px">
+  <div class="slide-panel-header">
+    <div class="slide-panel-title">⚖ Comparar con otra empresa</div>
+    <button class="slide-panel-close" onclick="closeComparePanel()">✕</button>
+  </div>
+  <div class="slide-panel-body" style="padding:1rem">
+    <p style="color:var(--gray3);font-size:.78rem;margin-bottom:.85rem;line-height:1.5">Comparar con <span id="compare-empresa-a" style="color:var(--gold)">empresa actual</span>:</p>
+    <div id="ca-search-compare"></div>
+    <div style="font-size:.7rem;color:var(--gray3);margin:.4rem 0 .6rem;text-align:center;letter-spacing:.04em">— o pegá los datos manualmente —</div>
+    <textarea id="compare-paste-b" placeholder="Pegá aquí los datos financieros de la segunda empresa..." style="width:100%;height:160px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text1);padding:.6rem .8rem;font-size:.78rem;resize:vertical;font-family:inherit;line-height:1.5"></textarea>
+    <div id="compare-error" style="display:none;color:#e74c3c;font-size:.76rem;margin-top:.5rem;padding:.4rem .6rem;background:rgba(231,76,60,.1);border-radius:5px"></div>
+    <div style="margin-top:.75rem;display:flex;gap:.5rem">
+      <button onclick="runCompare()" style="flex:1;background:var(--gold);border:none;color:#0D1B3E;padding:.55rem;border-radius:7px;font-weight:700;font-size:.82rem;cursor:pointer">COMPARAR →</button>
+      <button onclick="closeComparePanel()" style="background:transparent;border:1px solid var(--border);color:var(--gray3);padding:.55rem .9rem;border-radius:7px;cursor:pointer;font-size:.82rem">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Config / Secciones panel ───────────────────────────────────────────── -->
+<div class="panel-overlay" id="a360-config-overlay" onclick="closeA360Config()"></div>
+<div class="slide-panel" id="a360-config-panel" style="width:360px;right:-380px">
+  <div class="slide-panel-header">
+    <div class="slide-panel-title">⚙ Configurar Secciones</div>
+    <button class="slide-panel-close" onclick="closeA360Config()">✕</button>
+  </div>
+  <div class="slide-panel-body" id="a360-config-list"></div>
+</div>
+
+<!-- ════ SCRIPTS ════════════════════════════════════════════════════════════ -->
+<!-- Error banner -->
+<div id="err-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#C0392B;color:#fff;padding:.75rem 1.5rem;font-size:.82rem;font-weight:600;z-index:99999;line-height:1.5"></div>
+
+<script>if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="data/ranges.js?v=19"></script>
+<script src="app/reader.js?v=19"></script>
+<script src="app/indicators.js?v=19"></script>
+<script src="app/charts.js?v=19"></script>
+<script src="app/dashboard.js?v=19"></script>
+<script src="app/export.js?v=19"></script>
+<script src="app/main.js?v=20"></script>
+<script>
+// Init check — confirm all modules loaded
+window.addEventListener('DOMContentLoaded', function() {
+  var missing = [];
+  if (typeof INDICATORS === 'undefined') missing.push('INDICATORS (ranges.js)');
+  if (typeof Reader === 'undefined') missing.push('Reader (reader.js)');
+  if (typeof IndicatorEngine === 'undefined') missing.push('IndicatorEngine (indicators.js)');
+  if (typeof Charts360 === 'undefined') missing.push('Charts360 (charts.js)');
+  if (typeof Dashboard === 'undefined') missing.push('Dashboard (dashboard.js)');
+  if (typeof runManualA360 === 'undefined') missing.push('runManualA360 (main.js)');
+  if (missing.length) {
+    var b = document.getElementById('err-banner');
+    b.style.display = 'block';
+    b.textContent = '⚠ Error de carga: faltan módulos → ' + missing.join(', ');
+  }
+});
+window.onerror = function(msg, src, line) {
+  var b = document.getElementById('err-banner');
+  if (b) { b.style.display = 'block'; b.textContent = '⚠ Error JS: ' + msg + ' | ' + (src||'').split('/').pop() + ':' + line; }
+};
+</script>
+<script src="/js/empresa-search.js"></script>
+<script>
+EmpresaSearch.init({ wrapperId: 'ca-search-a360',     textareaId: 'paste-area',      formato: 'acciones360' });
+EmpresaSearch.init({ wrapperId: 'ca-search-compare',  textareaId: 'compare-paste-b', formato: 'acciones360' });
+</script>
+<style>
+.ca-particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.ca-particle{position:absolute;border-radius:50%;opacity:0;animation:caFloat linear infinite}
+@keyframes caFloat{0%{opacity:0;transform:translateY(0) translateX(0)}10%{opacity:.4}90%{opacity:.15}100%{opacity:0;transform:translateY(-85vh) translateX(15px)}}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 70% 55% at 65% 30%,rgba(26,86,196,.13) 0%,transparent 65%),radial-gradient(ellipse 45% 40% at 10% 80%,rgba(46,116,232,.08) 0%,transparent 60%),radial-gradient(ellipse 30% 30% at 90% 85%,rgba(201,168,76,.06) 0%,transparent 55%)}
+</style>
+<script>
+(function(){var c=document.createElement('div');c.className='ca-particles';document.body.appendChild(c);for(var i=0;i<55;i++){var p=document.createElement('div');p.className='ca-particle';var gold=Math.random()>.65;p.style.cssText='left:'+Math.random()*100+'%;bottom:-8px;width:'+(1+Math.random()*2.5)+'px;height:'+(1+Math.random()*2.5)+'px;background:'+(gold?'rgba(201,168,76,.7)':'rgba(90,155,255,.5)')+';animation-duration:'+(9+Math.random()*14)+'s;animation-delay:'+(Math.random()*12)+'s';c.appendChild(p);}})();
+</script>
+</body>
+</html>
+
+
+

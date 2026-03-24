@@ -1,0 +1,22 @@
+{
+  "name": "circulo-azul-checklist",
+  "version": "1.0.0",
+  "description": "Círculo Azul Finanzas — Check List Indicadores Financieros",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "@supabase/supabase-js": "^2.100.0",
+    "chart.js": "^4.5.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.3.1",
+    "express": "^4.18.2",
+    "express-basic-auth": "^1.2.1",
+    "express-rate-limit": "^8.3.1",
+    "openai": "^6.32.0",
+    "puppeteer": "^22.15.0"
+  }
+}

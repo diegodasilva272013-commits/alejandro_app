@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Señales v3.0 — Análisis Financiero</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+/* ─── VARIABLES ─────────────────────────────────────────────────────────── */
+:root {
+  --navy:    #0D1B3E;
+  --gold:    #C9A84C;
+  --gold2:   #F0D078;
+  --bg:      #05080F;
+  --bg1:     #080E1A;
+  --bg2:     #0D1627;
+  --midblue: #1E3A5F;
+  --green:   #1A8A4A;
+  --orange:  #E67E22;
+  --red:     #C0392B;
+  --blue:    #5A9BFF;
+  --sidebar-w: 260px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: #8FA8C8; font-family: 'Inter', sans-serif; min-height: 100vh; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+
+/* ─── HEADER ────────────────────────────────────────────────────────────── */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 200;
+  background: var(--navy);
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem;
+  box-shadow: 0 2px 16px rgba(0,0,0,.5);
+  border-bottom: 1px solid rgba(201,168,76,.15);
+}
+.header-logo {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 800; color: var(--navy); flex-shrink: 0;
+}
+.header-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.15rem; font-weight: 700; color: var(--gold); letter-spacing: .04em;
+}
+.header-tag {
+  font-size: .68rem; color: rgba(255,255,255,.4); letter-spacing: .12em; text-transform: uppercase;
+  border-left: 1px solid rgba(255,255,255,.1); padding-left: .8rem;
+}
+.header-empresa { color: rgba(255,255,255,.85); font-size: .85rem; font-weight: 500; }
+.header-back {
+  font-size: .72rem; font-weight: 600; color: rgba(255,255,255,.45);
+  text-decoration: none; letter-spacing: .06em; text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,.12); border-radius: 5px;
+  padding: .25rem .65rem; white-space: nowrap; flex-shrink: 0;
+  transition: color .15s, border-color .15s;
+}
+.header-back:hover { color: rgba(255,255,255,.85); border-color: rgba(255,255,255,.3); }
+.header-ca-brand {
+  display: flex; align-items: center; gap: .45rem;
+  text-decoration: none; flex-shrink: 0;
+}
+.header-ca-brand .topbar-brand-text { display:flex; flex-direction:column; line-height:1.1; }
+.header-ca-brand .topbar-brand-name { font-family:'Cormorant Garamond',serif; font-size:.9rem; font-weight:700; color:rgba(255,255,255,.85); letter-spacing:.04em; }
+.header-ca-brand .topbar-brand-sub  { font-size:.6rem; color:rgba(255,255,255,.4); letter-spacing:.1em; text-transform:uppercase; }
+.header-ca-brand:hover .topbar-brand-name { color:#fff; }
+.topbar-actions { display: flex; gap: .45rem; margin-left: auto; align-items: center; }
+.btn-topbar {
+  background: transparent; border: 1px solid rgba(201,168,76,.4);
+  color: var(--gold); padding: .32rem .85rem; border-radius: 6px;
+  font-size: .75rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background .15s; letter-spacing: .02em;
+}
+.btn-topbar:hover { background: rgba(201,168,76,.12); }
+.btn-topbar.solid { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.btn-topbar.solid:hover { background: #b8913e; }
+.btn-topbar.blue  { border-color: rgba(90,155,255,.5); color: var(--blue); }
+.btn-topbar.blue:hover { background: rgba(90,155,255,.1); }
+
+/* ─── SCREEN: UPLOAD ─────────────────────────────────────────────────────── */
+#screen-upload {
+  min-height: 100vh; background: var(--navy);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 1.5rem 3rem;
+}
+.upload-hero { text-align: center; margin-bottom: 2.5rem; }
+.upload-hero-eyebrow {
+  font-size: .72rem; letter-spacing: .25em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: .75rem;
+}
+.upload-hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700;
+  color: #fff; line-height: 1.15; margin-bottom: .9rem;
+}
+.upload-hero-sub { color: rgba(255,255,255,.5); font-size: .9rem; max-width: 520px; margin: 0 auto; line-height: 1.6; }
+
+.upload-card {
+  background: var(--bg2); border: 1px solid rgba(201,168,76,.2);
+  border-radius: 14px; padding: 2rem 2.5rem; width: 100%; max-width: 680px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.5);
+}
+.upload-tabs {
+  display: flex; gap: .5rem; margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,.06); padding-bottom: 1rem;
+}
+.upload-tab {
+  background: transparent; border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.5); padding: .45rem 1.1rem; border-radius: 6px;
+  font-size: .78rem; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.upload-tab.active { background: rgba(201,168,76,.15); border-color: var(--gold); color: var(--gold); }
+.upload-tab:hover:not(.active) { border-color: rgba(255,255,255,.25); color: rgba(255,255,255,.75); }
+
+.upload-panel { display: none; }
+.upload-panel.active { display: block; }
+
+/* ── Zona de DROP ── */
+.drop-zone {
+  border: 2px dashed rgba(201,168,76,.35); border-radius: 10px;
+  padding: 2.5rem 1.5rem; text-align: center; cursor: pointer;
+  transition: all .2s; position: relative;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--gold); background: rgba(201,168,76,.05);
+}
+.drop-zone-icon { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
+.drop-zone-text { color: rgba(255,255,255,.6); font-size: .85rem; margin-bottom: .5rem; }
+.drop-zone-hint { color: rgba(255,255,255,.3); font-size: .74rem; }
+.drop-zone-sub { color: var(--gold); font-size: .78rem; margin-top: .5rem; cursor: pointer; text-decoration: underline; }
+#file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+
+/* ── Textarea de pegado ── */
+.paste-area {
+  width: 100%; min-height: 220px;
+  background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px; color: rgba(255,255,255,.85);
+  font-family: 'Space Mono', monospace; font-size: .78rem;
+  padding: 1rem; resize: vertical; outline: none;
+  transition: border-color .15s; line-height: 1.6;
+}
+.paste-area:focus { border-color: rgba(201,168,76,.5); }
+.paste-area::placeholder { color: rgba(255,255,255,.2); }
+.paste-label { color: rgba(255,255,255,.5); font-size: .78rem; margin-bottom: .5rem; display: block; }
+
+.empresa-row { display: flex; gap: .75rem; margin-bottom: 1.25rem; }
+.inp-wrap { flex: 1; }
+.inp-label { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: .35rem; display: block; }
+.inp-field {
+  width: 100%; background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 7px; color: rgba(255,255,255,.9); font-size: .85rem; font-family: 'Inter', sans-serif;
+  padding: .55rem .85rem; outline: none; transition: border-color .15s;
+}
+.inp-field:focus { border-color: rgba(201,168,76,.5); }
+.inp-field::placeholder { color: rgba(255,255,255,.2); }
+
+.btn-generar {
+  width: 100%; padding: .9rem; border-radius: 9px; border: none;
+  background: linear-gradient(135deg, var(--gold), #8B6914);
+  color: var(--navy); font-size: .95rem; font-weight: 700;
+  cursor: pointer; letter-spacing: .05em; transition: opacity .2s;
+  margin-top: 1.25rem;
+}
+.btn-generar:hover { opacity: .88; }
+.btn-generar:disabled { opacity: .4; cursor: not-allowed; }
+
+#upload-error {
+  display: none; background: rgba(192,57,43,.12); border: 1px solid rgba(192,57,43,.4);
+  border-radius: 7px; padding: .65rem 1rem; color: #f09; font-size: .8rem; margin-top: .75rem;
+}
+.file-name-tag {
+  display: none; background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.3);
+  border-radius: 6px; padding: .5rem .85rem; font-size: .8rem; color: var(--gold);
+  margin-top: .75rem;
+}
+
+/* ─── SCREEN: LOADING ────────────────────────────────────────────────────── */
+#screen-loading {
+  display: none; min-height: 100vh;
+  background: var(--bg); align-items: center; justify-content: center;
+  flex-direction: column; gap: 1.5rem; padding-top: 56px;
+}
+.loading-ring {
+  width: 64px; height: 64px; border: 4px solid rgba(201,168,76,.15);
+  border-top-color: var(--gold); border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--gold); font-size: .9rem; letter-spacing: .08em; }
+.loading-step { color: rgba(255,255,255,.4); font-size: .78rem; }
+
+/* ─── SCREEN: DASHBOARD ──────────────────────────────────────────────────── */
+#screen-dashboard { display: none; }
+.dash-layout {
+  display: flex; padding-top: 56px; min-height: 100vh;
+}
+.dash-sidebar {
+  position: fixed; top: 56px; left: 0; bottom: 0;
+  width: var(--sidebar-w); background: var(--navy);
+  overflow-y: auto; z-index: 100; padding: 1.25rem 0;
+  border-right: 1px solid rgba(255,255,255,.06);
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,.2) transparent;
+}
+.nav-section-title {
+  color: rgba(255,255,255,.3); font-size: .63rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .12em; padding: .75rem 1.25rem .3rem;
+}
+.nav-item {
+  display: flex; align-items: center; gap: .55rem; padding: .5rem 1.25rem;
+  color: rgba(255,255,255,.45); font-size: .78rem; cursor: pointer;
+  transition: all .15s; border-left: 3px solid transparent; user-select: none;
+}
+.nav-item:hover { color: rgba(255,255,255,.8); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--gold); font-weight: 600; border-left-color: var(--gold); background: rgba(201,168,76,.07); }
+.nav-badge {
+  margin-left: auto; font-size: .65rem; font-weight: 700; padding: .1rem .4rem;
+  border-radius: 4px; min-width: 20px; text-align: center;
+}
+.nav-badge.cumple  { background: rgba(26,138,74,.25);  color: #4ddc8a; }
+.nav-badge.no      { background: rgba(192,57,43,.25);  color: #ff7b7b; }
+.nav-badge.falta   { background: rgba(230,126,34,.25); color: #ffaa44; }
+.nav-badge.neutral { background: rgba(255,255,255,.1); color: rgba(255,255,255,.5); }
+.nav-counts { padding: .75rem 1.25rem; border-top: 1px solid rgba(255,255,255,.06); margin-top: .5rem; }
+.nc-row { display: flex; justify-content: space-between; align-items: center; padding: .2rem 0; font-size: .75rem; }
+.nc-label { color: rgba(255,255,255,.35); }
+.nc-val { font-weight: 700; font-size: .82rem; }
+
+.dash-main {
+  margin-left: var(--sidebar-w); flex: 1;
+  padding: 1.75rem 2rem 4rem; max-width: calc(100vw - var(--sidebar-w));
+}
+
+/* ─── RESUMEN HEADER ─────────────────────────────────────────────────────── */
+.dash-header-empresa {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.9rem; font-weight: 700; color: #fff; margin-bottom: .25rem;
+}
+.dash-header-meta { color: rgba(255,255,255,.4); font-size: .8rem; margin-bottom: 1.5rem; }
+
+.score-strip {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: .85rem; margin-bottom: 2rem;
+}
+.score-card {
+  background: var(--bg2); border-radius: 10px; padding: 1rem 1.1rem;
+  border: 1px solid rgba(255,255,255,.07);
+  border-top: 3px solid transparent;
+}
+.score-card.verde  { border-top-color: var(--green); }
+.score-card.rojo   { border-top-color: var(--red); }
+.score-card.orange { border-top-color: var(--orange); }
+.score-card.gold   { border-top-color: var(--gold); }
+.score-card.blue   { border-top-color: var(--blue); }
+.sc-label { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.4); margin-bottom: .35rem; }
+.sc-value { font-size: 1.7rem; font-weight: 700; color: #fff; line-height: 1; }
+.sc-sub   { font-size: .72rem; color: rgba(255,255,255,.35); margin-top: .25rem; }
+
+/* ─── GRÁFICOS ───────────────────────────────────────────────────────────── */
+.charts-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem;
+}
+@media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+.chart-card {
+  background: var(--bg2); border: 1px solid rgba(26,86,196,.18);
+  border-radius: 12px; padding: 1.25rem;
+  box-shadow: 0 4px 24px rgba(5,8,15,.5);
+}
+.chart-card.full { grid-column: 1 / -1; }
+.chart-title {
+  font-size: .78rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 1rem;
+}
+.chart-wrap { height: 240px; position: relative; }
+.chart-wrap canvas { height: 100% !important; }
+
+/* ─── SECCIONES DE PUNTOS ────────────────────────────────────────────────── */
+.section-block {
+  background: var(--bg1); border: 1px solid rgba(26,86,196,.2);
+  border-radius: 12px; box-shadow: 0 4px 24px rgba(5,8,15,.5);
+  margin-bottom: 1.5rem; overflow: visible;
+}
+.section-title {
+  background: rgba(13,22,39,.98); color: var(--blue);
+  padding: .85rem 1.25rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.05rem; font-weight: 700; letter-spacing: .04em;
+  border-bottom: 1px solid rgba(26,86,196,.2);
+  display: flex; align-items: center; gap: .75rem;
+}
+.section-title-counter {
+  font-size: .7rem; font-weight: 600; letter-spacing: .04em;
+  padding: .15rem .5rem; border-radius: 4px; font-family: 'Inter', sans-serif;
+}
+.section-body { padding: 0; }
+
+/* ─── PUNTO CARD ─────────────────────────────────────────────────────────── */
+.punto-card {
+  border-bottom: 1px solid rgba(255,255,255,.04); padding: 1rem 1.25rem; display: flex;
+  flex-wrap: wrap; gap: .75rem; align-items: flex-start;
+}
+.punto-card:last-child { border-bottom: none; }
+.punto-letra {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 800; flex-shrink: 0;
+  font-family: 'Space Mono', monospace; letter-spacing: 0;
+}
+.punto-letra.cumple  { background: rgba(26,138,74,.2);  color: #4ddc8a; border: 1px solid rgba(26,138,74,.4); }
+.punto-letra.no      { background: rgba(192,57,43,.2);  color: #ff7b7b; border: 1px solid rgba(192,57,43,.4); }
+.punto-letra.falta   { background: rgba(230,126,34,.2); color: #ffaa44; border: 1px solid rgba(230,126,34,.4); }
+.punto-body { flex: 1; min-width: 0; }
+.punto-titulo { color: rgba(255,255,255,.85); font-size: .84rem; font-weight: 600; margin-bottom: .3rem; }
+.punto-datos  { color: rgba(255,255,255,.38); font-size: .73rem; font-family: 'Space Mono', monospace; margin-bottom: .4rem; }
+.punto-interp { color: rgba(255,255,255,.6); font-size: .78rem; line-height: 1.55; }
+.badge-resultado {
+  font-size: .68rem; font-weight: 700; padding: .2rem .7rem; border-radius: 99px;
+  letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+  align-self: flex-start; margin-top: .25rem;
+}
+.badge-resultado.cumple  { background: rgba(26,138,74,.2);  color: #4ddc8a; border: 1px solid rgba(26,138,74,.35); }
+.badge-resultado.no      { background: rgba(192,57,43,.2);  color: #ff7b7b; border: 1px solid rgba(192,57,43,.35); }
+.badge-resultado.falta   { background: rgba(230,126,34,.2); color: #ffaa44; border: 1px solid rgba(230,126,34,.3); }
+
+.alerta-box {
+  margin: 0 1.25rem .75rem; padding: .65rem 1rem;
+  background: rgba(192,57,43,.08); border-left: 3px solid var(--red);
+  border-radius: 0 6px 6px 0; font-size: .76rem; color: #ff9f9f; line-height: 1.5;
+}
+.alerta-box .alerta-id { font-weight: 700; color: var(--red); margin-right: .4rem; }
+
+/* ─── RESUMEN FINAL ──────────────────────────────────────────────────────── */
+.resumen-box {
+  background: var(--bg2); border: 1px solid rgba(201,168,76,.25);
+  border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;
+}
+.resumen-box-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem; font-weight: 700; color: var(--gold); margin-bottom: 1rem;
+  letter-spacing: .04em;
+}
+.resumen-lista { list-style: none; }
+.resumen-lista li {
+  display: flex; align-items: flex-start; gap: .6rem; padding: .35rem 0;
+  border-bottom: 1px solid rgba(255,255,255,.04); font-size: .8rem; color: rgba(255,255,255,.7);
+}
+.resumen-lista li:last-child { border-bottom: none; }
+.resumen-lista .dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: .3rem;
+}
+.dot-green  { background: var(--green); }
+.dot-red    { background: var(--red); }
+.dot-orange { background: var(--orange); }
+.dot-gray   { background: rgba(255,255,255,.2); }
+
+.conclusion-box {
+  background: rgba(201,168,76,.07); border: 1px solid rgba(201,168,76,.25);
+  border-radius: 10px; padding: 1.25rem;
+}
+.conclusion-label { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: .5rem; }
+.conclusion-text  { color: rgba(255,255,255,.8); font-size: .84rem; line-height: 1.65; }
+.conclusion-cita  { color: var(--gold); font-style: italic; margin-top: .5rem; font-size: .82rem; }
+
+/* ─── RESUMEN EJECUTIVO ─────────────────────────────────────────────────── */
+.rej-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+  padding: 1.25rem;
+}
+@media (max-width: 700px) { .rej-grid { grid-template-columns: 1fr; } }
+
+.rej-section-hdr {
+  font-size: .68rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: .65rem; font-weight: 600;
+}
+.rej-col-metricas { display: flex; flex-direction: column; }
+.rej-fila {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .32rem 0; border-bottom: 1px solid rgba(255,255,255,.05);
+  gap: .5rem;
+}
+.rej-fila:last-child { border-bottom: none; }
+.rej-label { font-size: .8rem; color: rgba(255,255,255,.55); }
+.rej-val   { font-size: .82rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.rej-score-box {
+  border: 1px solid; border-radius: 12px; padding: 1.2rem;
+  text-align: center;
+}
+.rej-score-pct   { font-family: 'Space Mono', monospace; font-size: 2.4rem; font-weight: 700; line-height: 1; }
+.rej-score-label { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; margin: .4rem 0 .25rem; }
+.rej-score-sub   { font-size: .78rem; color: rgba(255,255,255,.5); }
+.rej-score-detalle { font-size: .72rem; margin-top: .5rem; color: rgba(255,255,255,.45); }
+
+.rej-alertas-box { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+.rej-alerta {
+  background: rgba(192,57,43,.1); border: 1px solid rgba(192,57,43,.3);
+  border-radius: 7px; padding: .5rem .75rem; font-size: .78rem; color: #ff9090;
+}
+.rej-alerta-ok {
+  background: rgba(26,138,74,.08); border: 1px solid rgba(26,138,74,.25);
+  border-radius: 7px; padding: .5rem .75rem; font-size: .78rem; color: #4ddc8a;
+}
+.rej-conclusion-box {
+  background: rgba(201,168,76,.07); border: 1px solid rgba(201,168,76,.2);
+  border-radius: 10px; padding: 1rem;
+}
+.rej-conclusion-lbl { font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin-bottom: .4rem; }
+.rej-conclusion-txt { color: rgba(255,255,255,.78); font-size: .82rem; line-height: 1.6; }
+.rej-cita { color: var(--gold); font-style: italic; margin-top: .5rem; font-size: .8rem; }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <a href="/" class="header-ca-brand" title="Volver al menú principal">
+    <svg class="topbar-logo-icon" width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="tbcircle" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stop-color="#5A9BFF"/>
+          <stop offset="100%" stop-color="#0D2870"/>
+        </radialGradient>
+        <radialGradient id="tbglow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(90,155,255,0.35)"/>
+          <stop offset="100%" stop-color="rgba(13,40,112,0)"/>
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="31" fill="url(#tbglow)"/>
+      <circle cx="32" cy="32" r="26" fill="url(#tbcircle)"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+      <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+      <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+      <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+      <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+    </svg>
+    <div class="topbar-brand-text">
+      <span class="topbar-brand-name">Círculo Azul</span>
+      <span class="topbar-brand-sub">Finanzas</span>
+    </div>
+  </a>
+  <div class="header-logo">S</div>
+  <span class="header-name">Señales v3.0</span>
+  <span class="header-tag">Análisis Financiero · 29 puntos</span>
+  <span class="header-empresa" id="hdr-empresa" style="display:none"></span>
+  <div class="topbar-actions" id="topbar-actions" style="display:none">
+    <button class="btn-topbar" onclick="volverUpload()">← Nuevo análisis</button>
+    <button class="btn-topbar" onclick="openSenalesHist()">📋 Historial</button>
+    <button class="btn-topbar" onclick="saveSenalesAnalisis()">💾 Guardar</button>
+    <button class="btn-topbar" onclick="shareSenalesAnalisis()">🔗 Compartir</button>
+    <button class="btn-topbar blue" onclick="verPDFSenales()">👁 Ver PDF</button>
+    <button class="btn-topbar solid" onclick="exportarPDFSenales()">⬇ PDF</button>
+    <button class="btn-topbar" onclick="openComparePanelSenales()" style="border-color:rgba(201,168,76,.4);color:var(--gold)">⚖ Comparar</button>
+  </div>
+</header>
+
+<!-- ══ HISTORIAL PANEL — Señales ══════════════════════════════════════════ -->
+<div id="senales-hist-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100" onclick="closeSenalesHist()"></div>
+<div id="senales-hist-panel" style="position:fixed;top:0;right:-440px;width:420px;max-width:96vw;height:100vh;background:#080E1A;border-left:1px solid rgba(26,86,196,.3);z-index:1101;transition:right .3s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column">
+  <div style="padding:1.1rem 1.2rem;border-bottom:1px solid rgba(26,86,196,.2);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-size:.9rem;font-weight:700;color:#D8E6F5">📋 Historial — Señales</div>
+    <button onclick="closeSenalesHist()" style="background:none;border:none;color:#3d5a7a;font-size:1.2rem;cursor:pointer;padding:.2rem .4rem;line-height:1">✕</button>
+  </div>
+  <div id="senales-hist-list" style="flex:1;overflow-y:auto;padding:1rem"></div>
+</div>
+<div id="senales-toast" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(8px);background:#1A56C4;color:#fff;padding:.55rem 1.2rem;border-radius:8px;font-size:.82rem;font-weight:600;z-index:2000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none"></div>
+
+<!-- ══ SCREEN: UPLOAD ══════════════════════════════════════════════════════ -->
+<div id="screen-upload">
+  <div class="upload-hero">
+    <div class="upload-hero-eyebrow">Señales de ayuda para Indicadores Financieros</div>
+    <h1 class="upload-hero-title">Análisis Financiero<br>Profesional v3.0</h1>
+    <p class="upload-hero-sub">Pegá los datos del balance o subí un archivo — el sistema evalúa los 29 puntos y genera el informe completo.</p>
+  </div>
+
+  <div class="upload-card">
+    <div class="empresa-row">
+      <div class="inp-wrap">
+        <label class="inp-label" for="inp-empresa">Empresa</label>
+        <input class="inp-field" id="inp-empresa" type="text" placeholder="Ej: Apple Inc." autocomplete="off">
+      </div>
+      <div class="inp-wrap" style="max-width:130px">
+        <label class="inp-label" for="inp-ticker">Ticker</label>
+        <input class="inp-field" id="inp-ticker" type="text" placeholder="Ej: AAPL" autocomplete="off">
+      </div>
+      <div class="inp-wrap" style="max-width:130px">
+        <label class="inp-label" for="inp-periodo">Período</label>
+        <input class="inp-field" id="inp-periodo" type="text" placeholder="LTM / Q3 2025" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="upload-tabs">
+      <button class="upload-tab active" onclick="switchTab('pegar')">📋 Pegar datos</button>
+      <button class="upload-tab" onclick="switchTab('archivo')">📁 Subir archivo</button>
+    </div>
+
+    <!-- Panel: Pegar -->
+    <div class="upload-panel active" id="panel-pegar">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+        <label class="paste-label" style="margin-bottom:0">Pegá aquí los datos financieros (texto libre, tabla, JSON, CSV):</label>
+        <button onclick="cargarEjemplo()" style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.4);color:var(--gold);padding:.3rem .85rem;border-radius:6px;font-size:.73rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-left:.75rem">⚡ Datos de ejemplo</button>
+      </div>
+      <div id="ca-search-senales"></div>
+      <textarea class="paste-area" id="txt-paste"
+        placeholder="Ejemplo:
+ROIC: 18.5%
+WACC: 9.2%
+ROE: 24%
+ROA: 12%
+Margen Bruto: 43%
+Margen Neto: 26%
+Margen EBITDA: 35%
+PER LTM: 28x
+Deuda Neta / EBITDA: 1.2x
+FCF Yield: 3.8%
+Balance sano: Sí
+Ventaja competitiva: Sí
+..."></textarea>
+    </div>
+
+    <!-- Panel: Archivo -->
+    <div class="upload-panel" id="panel-archivo">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <input type="file" id="file-input" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">
+        <span class="drop-zone-icon">📂</span>
+        <div class="drop-zone-text">Arrastrá tu archivo aquí o hacé click para seleccionar</div>
+        <div class="drop-zone-hint">.txt, .csv, .xlsx, .xls, .docx, .pdf</div>
+      </div>
+      <div class="file-name-tag" id="file-name-tag"></div>
+    </div>
+
+    <div id="upload-error"></div>
+    <button class="btn-generar" id="btn-analizar" onclick="iniciarAnalisis()">🚀 GENERAR ANÁLISIS COMPLETO</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN: LOADING ════════════════════════════════════════════════════ -->
+<div id="screen-loading" style="display:none;min-height:100vh;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;padding-top:56px;display:none">
+  <div class="loading-ring"></div>
+  <div class="loading-text">Analizando datos financieros…</div>
+  <div class="loading-step" id="loading-step">Parseando texto…</div>
+</div>
+
+<!-- ══ SCREEN: DASHBOARD ═══════════════════════════════════════════════════ -->
+<div id="screen-dashboard">
+  <div class="dash-layout">
+
+    <!-- SIDEBAR -->
+    <nav class="dash-sidebar" id="dash-sidebar">
+      <div class="nav-section-title">Resumen</div>
+      <div class="nav-item active" onclick="scrollToSection('sec-resumen')">
+        <span>📊</span> Resumen General
+      </div>
+      <div class="nav-item" onclick="scrollToSection('sec-resumen-ejecutivo')">
+        <span>📋</span> Resumen Ejecutivo
+      </div>
+      <div class="nav-item" onclick="scrollToSection('sec-graficos')">
+        <span>📈</span> Gráficos
+      </div>
+
+      <div class="nav-section-title" style="margin-top:.5rem">Evaluación</div>
+      <div id="nav-puntos"></div>
+
+      <div class="nav-counts" id="nav-counts"></div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="dash-main" id="dash-main">
+
+      <!-- Compare section -->
+      <div id="sn-sec-compare" style="display:none;background:var(--bg2);border:1px solid rgba(201,168,76,.2);border-radius:12px;margin-bottom:1.25rem;padding:1.25rem">
+        <div style="font-size:.95rem;font-weight:700;color:var(--gold);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.06em">⚖ COMPARACIÓN DE EMPRESAS</div>
+        <div id="sn-compare-header-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem"></div>
+        <div id="sn-compare-table-wrap"></div>
+        <div id="sn-compare-ia-wrap" style="display:none;margin-top:1.2rem;background:rgba(90,155,255,.05);border:1px solid rgba(90,155,255,.18);border-radius:10px;padding:1.2rem">
+          <div style="font-size:.78rem;font-weight:700;color:var(--blue);letter-spacing:.08em;margin-bottom:.8rem;text-transform:uppercase">Análisis Comparativo IA</div>
+          <div id="sn-compare-ia-text" style="font-size:.83rem;color:#8FA8C8;line-height:1.7"></div>
+        </div>
+        <button onclick="closeSenalesCompare()" style="margin-top:1rem;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.45);padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-size:.78rem">Cerrar comparación ✕</button>
+      </div>
+
+      <!-- HEADER empresa -->
+      <div id="sec-resumen">
+        <div class="dash-header-empresa" id="dash-empresa"></div>
+        <div class="dash-header-meta" id="dash-meta"></div>
+        <div class="score-strip" id="score-strip"></div>
+      </div>
+
+      <!-- RESUMEN EJECUTIVO -->
+      <div id="sec-resumen-ejecutivo"></div>
+
+      <!-- GRÁFICOS -->
+      <div id="sec-graficos" class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Rentabilidad</div>
+          <div class="chart-wrap"><canvas id="chart-rent"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribución de Resultados</div>
+          <div class="chart-wrap"><canvas id="chart-donut"></canvas></div>
+        </div>
+        <div class="chart-card full">
+          <div class="chart-title">Cascada de Márgenes</div>
+          <div class="chart-wrap" style="height:200px"><canvas id="chart-margenes"></canvas></div>
+        </div>
+      </div>
+
+      <!-- PUNTOS evaluados -->
+      <div id="sec-puntos"></div>
+
+      <!-- RESUMEN FINAL -->
+      <div id="sec-final"></div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── Compare panel Señales ──────────────────────────────────────────────── -->
+<div id="compare-overlay-sn" onclick="closeComparePanelSenales()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;backdrop-filter:blur(3px)"></div>
+<div id="compare-panel-sn" style="position:fixed;top:0;right:-440px;width:420px;height:100vh;background:var(--bg2);border-left:1px solid rgba(201,168,76,.2);z-index:9999;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(5,8,15,.7)">
+  <div style="background:var(--navy);color:#fff;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(201,168,76,.15)">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700">⚖ Comparar con otra empresa</div>
+    <button onclick="closeComparePanelSenales()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:1rem;background:var(--bg2);color:#8FA8C8">
+    <p style="color:rgba(255,255,255,.35);font-size:.78rem;margin-bottom:.85rem;line-height:1.5">Comparar <span id="sn-compare-empresa-a" style="color:var(--gold)">empresa actual</span> con:</p>
+    <div id="ca-search-compare-sn"></div>
+    <div style="font-size:.7rem;color:rgba(255,255,255,.3);margin:.4rem 0 .6rem;text-align:center;letter-spacing:.04em">— o pegá los datos manualmente —</div>
+    <textarea id="sn-compare-paste-b" placeholder="Pegá aquí los datos financieros de la segunda empresa..." style="width:100%;height:160px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:rgba(255,255,255,.85);padding:.6rem .8rem;font-size:.78rem;resize:vertical;font-family:inherit;line-height:1.5;outline:none"></textarea>
+    <div id="sn-compare-error" style="display:none;color:#e74c3c;font-size:.76rem;margin-top:.5rem;padding:.4rem .6rem;background:rgba(231,76,60,.1);border-radius:5px"></div>
+    <div style="margin-top:.75rem;display:flex;gap:.5rem">
+      <button onclick="runSenalesCompare()" style="flex:1;background:var(--gold);border:none;color:var(--navy);padding:.55rem;border-radius:7px;font-weight:700;font-size:.82rem;cursor:pointer">COMPARAR →</button>
+      <button onclick="closeComparePanelSenales()" style="background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.45);padding:.55rem .9rem;border-radius:7px;cursor:pointer;font-size:.82rem">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app/parser.js?v=1"></script>
+<script src="app/evaluador.js?v=1"></script>
+<script src="app/dashboard.js?v=1"></script>
+<script src="app/main.js?v=6"></script>
+<script src="/js/empresa-search.js"></script>
+<script>
+EmpresaSearch.init({ wrapperId: 'ca-search-senales', textareaId: 'txt-paste', formato: 'senales' });
+EmpresaSearch.init({ wrapperId: 'ca-search-compare-sn', textareaId: 'sn-compare-paste-b', formato: 'senales' });
+</script>
+<script>
+// ── COMPARAR EMPRESAS — SEÑALES ───────────────────────────────────────────
+var _snCompareDataB    = null;
+var _snCompareResultsB = null;
+var _snCompareEmpresaB = '';
+
+function openComparePanelSenales() {
+  var el = document.getElementById('sn-compare-empresa-a');
+  var empA = document.getElementById('dash-empresa') ? document.getElementById('dash-empresa').textContent : 'empresa actual';
+  if (el) el.textContent = empA || 'empresa actual';
+  document.getElementById('sn-compare-error').style.display = 'none';
+  document.getElementById('compare-overlay-sn').style.display = 'block';
+  requestAnimationFrame(function(){ document.getElementById('compare-panel-sn').style.right = '0'; });
+}
+
+function closeComparePanelSenales() {
+  document.getElementById('compare-panel-sn').style.right = '-440px';
+  setTimeout(function(){ document.getElementById('compare-overlay-sn').style.display = 'none'; }, 320);
+}
+
+function runSenalesCompare() {
+  var raw = (document.getElementById('sn-compare-paste-b').value || '').trim();
+  var errEl = document.getElementById('sn-compare-error');
+  if (!raw) { errEl.style.display = 'block'; errEl.textContent = 'Pegá los datos de la segunda empresa antes de comparar.'; return; }
+  errEl.style.display = 'none';
+  try {
+    var datosB = typeof parsearTexto !== 'undefined' ? parsearTexto(raw) : null;
+    if (!datosB) throw new Error('Parser no disponible aún.');
+    var evalB = typeof evaluarLos29Puntos !== 'undefined' ? evaluarLos29Puntos(datosB) : { puntos: [], resumen: null };
+    _snCompareDataB    = datosB;
+    _snCompareResultsB = { datos: datosB, puntos: evalB.puntos || [], resumen: evalB.resumen };
+    _snCompareEmpresaB = (datosB.empresa || (raw.match(/(?:empresa|company|accion)[:\s]+([\w\s\.]+)/i)||[])[1]||'Empresa B').toString().trim().split('\n')[0];
+    closeComparePanelSenales();
+    renderSenalesCompareSection();
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Error al procesar los datos: ' + e.message;
+  }
+}
+
+function closeSenalesCompare() {
+  _snCompareDataB = null; _snCompareResultsB = null; _snCompareEmpresaB = '';
+  var sec = document.getElementById('sn-sec-compare');
+  if (sec) sec.style.display = 'none';
+}
+
+function renderSenalesCompareSection() {
+  var empA = document.getElementById('dash-empresa') ? document.getElementById('dash-empresa').textContent : 'Empresa A';
+  var empB = _snCompareEmpresaB;
+  var resA = typeof _datosGlobales !== 'undefined' ? _datosGlobales : null;
+  var resB = _snCompareResultsB;
+
+  // Header cards — use score/points
+  var hdr = document.getElementById('sn-compare-header-cards');
+  if (hdr) {
+    var getScore = function(r) {
+      if (!r) return null;
+      if (r.resumen) {
+        var rs = r.resumen;
+        if (rs.totalCumple != null && rs.total != null) return rs.totalCumple + '/' + rs.total;
+        if (rs.totalCumple != null) return rs.totalCumple;
+      }
+      if (r.score != null) return r.score;
+      return null;
+    };
+    var scA = getScore(resA), scB = getScore(resB);
+    var makeCard = function(emp, sc, isWinner) {
+      return '<div style="background:rgba(13,27,62,.6);border:2px solid '+(isWinner?'var(--gold)':'rgba(201,168,76,.2)')+';border-radius:14px;padding:1.2rem;text-align:center">' +
+        (isWinner?'<div style="font-size:.6rem;color:var(--gold);font-weight:700;letter-spacing:.1em;margin-bottom:.4rem">🏆 MEJOR SCORE</div>':'') +
+        '<div style="font-size:1.1rem;font-weight:800;color:rgba(255,255,255,.9);margin-bottom:.5rem">'+emp+'</div>' +
+        '<div style="font-size:2.6rem;font-weight:900;color:#4ADE80;line-height:1">'+(sc!=null?sc:'—')+'</div>' +
+        '<div style="font-size:.65rem;color:rgba(255,255,255,.3);margin:.3rem 0 .7rem">Score / Señales</div></div>';
+    };
+    var getNumScore = function(r) { return r && r.resumen && r.resumen.totalCumple != null ? r.resumen.totalCumple : 0; };
+    var saNum = getNumScore(resA), sbNum = getNumScore(resB);
+    hdr.innerHTML = makeCard(empA, scA, saNum >= sbNum) + makeCard(empB, scB, sbNum > saNum);
+  }
+
+  // Build metrics comparison — use puntos if available
+  var wrap = document.getElementById('sn-compare-table-wrap');
+  if (wrap) {
+    var ptsA = resA && resA.puntos ? resA.puntos : [];
+    var ptsB = resB && resB.puntos ? resB.puntos : [];
+    var allKeys = [];
+    ptsA.forEach(function(p){ if (!allKeys.includes(p.id||p.letra)) allKeys.push(p.id||p.letra); });
+    ptsB.forEach(function(p){ if (!allKeys.includes(p.id||p.letra)) allKeys.push(p.id||p.letra); });
+    var rows = allKeys.slice(0, 20);
+    var tbl = '<table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
+      '<thead><tr><th style="background:var(--midblue);color:rgba(255,255,255,.5);padding:.45rem .7rem;text-align:left;font-size:.68rem;font-weight:600;letter-spacing:.04em">Punto</th>' +
+      '<th style="background:var(--midblue);color:var(--gold);padding:.45rem .7rem;text-align:center;font-size:.68rem;font-weight:600">'+empA+'</th>' +
+      '<th style="background:var(--midblue);color:var(--gold);padding:.45rem .7rem;text-align:center;font-size:.68rem;font-weight:600">'+empB+'</th></tr></thead><tbody>' +
+      rows.map(function(key){
+        var pA = ptsA.find(function(p){ return (p.id||p.letra)===key; });
+        var pB = ptsB.find(function(p){ return (p.id||p.letra)===key; });
+        var sA = pA ? (pA.cumple!=null ? (pA.cumple?'✅':'❌') : (pA.signal||pA.resultado||'—')) : '—';
+        var sB = pB ? (pB.cumple!=null ? (pB.cumple?'✅':'❌') : (pB.signal||pB.resultado||'—')) : '—';
+        var lbl = pA ? (pA.nombre||pA.name||key) : key;
+        return '<tr><td style="padding:.4rem .7rem;border-bottom:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.6);font-size:.75rem">'+lbl+'</td><td style="padding:.4rem .7rem;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">'+sA+'</td><td style="padding:.4rem .7rem;border-bottom:1px solid rgba(255,255,255,.05);text-align:center">'+sB+'</td></tr>';
+      }).join('') + '</tbody></table>';
+    var emptyMsg = '<p style="color:rgba(255,255,255,.3);font-size:.83rem">Datos de señales no disponibles para comparación detallada.</p>';
+    wrap.innerHTML = rows.length ? tbl : emptyMsg;
+  }
+
+  // IA
+  var iaWrap = document.getElementById('sn-compare-ia-wrap');
+  if (iaWrap) {
+    iaWrap.style.display = 'block';
+    document.getElementById('sn-compare-ia-text').innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;color:rgba(255,255,255,.3)"><div style="width:14px;height:14px;border:2px solid rgba(201,168,76,.3);border-top-color:var(--gold);border-radius:50%;animation:spinSn .7s linear infinite;flex-shrink:0"></div>Generando análisis comparativo...</div><style>@keyframes spinSn{to{transform:rotate(360deg)}}</style>';
+    _runSenalesCompareIA(empA, empB, resA, resB);
+  }
+
+  var sec = document.getElementById('sn-sec-compare');
+  if (sec) { sec.style.display = 'block'; sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+async function _runSenalesCompareIA(empA, empB, resA, resB) {
+  var fmtRes = function(r, emp) {
+    if (!r) return emp+': datos no disponibles';
+    var sc = r.resumen ? (r.resumen.totalCumple+'/'+r.resumen.total) : '—';
+    var lines = [emp+' — Score: '+sc];
+    var pts = r.puntos || [];
+    pts.slice(0,15).forEach(function(p){ lines.push((p.nombre||p.letra||p.id||'?')+': '+(p.resultado||p.cumple||'—')); });
+    return lines.join('\n');
+  };
+  var prompt = 'Sos un analista financiero de Círculo Azul Finanzas. Comparás DOS empresas con el análisis de Señales v3.0.\n\n'+fmtRes(resA,empA)+'\n\n'+fmtRes(resB,empB)+'\n\nComparár todos los puntos del análisis de señales. Conclusión clara. Estructurá con: ## Rentabilidad, ## Flujo de Caja, ## Deuda, ## Valoración, ## Conclusión';
+  try {
+    var res = await fetch('/api/analisis', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto: fmtRes(resA,empA)+'\n---\n'+fmtRes(resB,empB), empresa: empA+' vs '+empB, prompt_extra: prompt })
+    });
+    var data = await res.json();
+    var texto = data.analisis || data.result || 'Sin respuesta del modelo.';
+    var el = document.getElementById('sn-compare-ia-text');
+    if (el) el.innerHTML = texto.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/#{1,3} (.+)/g,'<h4 style="color:var(--gold);margin:.7rem 0 .3rem">$1</h4>');
+  } catch(e) {
+    var el = document.getElementById('sn-compare-ia-text');
+    if (el) el.innerHTML = '<span style="color:#e74c3c">Error al contactar IA: '+e.message+'</span>';
+  }
+}
+</script>
+<style>
+.ca-particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.ca-particle{position:absolute;border-radius:50%;opacity:0;animation:caFloat linear infinite}
+@keyframes caFloat{0%{opacity:0;transform:translateY(0) translateX(0)}10%{opacity:.4}90%{opacity:.15}100%{opacity:0;transform:translateY(-85vh) translateX(15px)}}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 70% 55% at 65% 30%,rgba(26,86,196,.13) 0%,transparent 65%),radial-gradient(ellipse 45% 40% at 10% 80%,rgba(46,116,232,.08) 0%,transparent 60%),radial-gradient(ellipse 30% 30% at 90% 85%,rgba(201,168,76,.06) 0%,transparent 55%)}
+</style>
+<script>
+(function(){var c=document.createElement('div');c.className='ca-particles';document.body.appendChild(c);for(var i=0;i<55;i++){var p=document.createElement('div');p.className='ca-particle';var gold=Math.random()>.65;p.style.cssText='left:'+Math.random()*100+'%;bottom:-8px;width:'+(1+Math.random()*2.5)+'px;height:'+(1+Math.random()*2.5)+'px;background:'+(gold?'rgba(201,168,76,.7)':'rgba(90,155,255,.5)')+';animation-duration:'+(9+Math.random()*14)+'s;animation-delay:'+(Math.random()*12)+'s';c.appendChild(p);}})();
+</script>
+</body>
+</html>

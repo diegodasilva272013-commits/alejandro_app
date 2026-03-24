@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROImp vs WACC — Círculo Azul Finanzas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── VARIABLES (idénticas al Checklist Financiero) ──────────────────────── */
+    :root {
+      --bg0:#05080F; --bg1:#080E1A; --bg2:#0D1627; --bg3:#142035;
+      --gold1:#1A56C4; --gold2:#2E74E8; --gold3:#5A9BFF;
+      --silver1:#8FA8C8; --silver2:#B8CEEA; --silver3:#D8E6F5;
+      --white:#FFFFFF;
+      --gray1:#C4D4EA; --gray2:#6A829E;
+      --green:#1A8A4A; --greenbg:#0F5C32;
+      --red:#C0392B;   --redbg:#7D1F1A;
+      --amber:#D68910; --amberbg:#7D5B00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background: var(--bg0);
+      color: var(--silver2);
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      margin: 0; padding: 0;
+    }
+
+    /* ── TOPBAR ─────────────────────────────────────────────────────────────── */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 56px;
+      background: rgba(5,8,15,.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(26,86,196,.35);
+      display: flex; align-items: center;
+      padding: 0 1.5rem; gap: 1.25rem;
+      z-index: 1000;
+    }
+    .topbar-back {
+      color: var(--silver1);
+      font-size: .78rem;
+      text-decoration: none;
+      letter-spacing: .04em;
+      transition: color .15s;
+      white-space: nowrap;
+    }
+    .topbar-back:hover { color: var(--gold3); }
+    .topbar-divider {
+      width: 1px; height: 22px;
+      background: rgba(26,86,196,.3);
+      flex-shrink: 0;
+    }
+    .topbar-title {
+      color: var(--white);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem; font-weight: 700;
+      letter-spacing: .06em;
+      flex: 1;
+    }
+    .topbar-sub {
+      color: var(--silver1);
+      font-size: .7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .btn-back-topbar {
+      background: transparent;
+      border: 1px solid rgba(26,86,196,.45);
+      color: var(--gold3);
+      padding: .35rem .95rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .78rem;
+      letter-spacing: .04em;
+      transition: background .15s, border-color .15s;
+      display: none;
+    }
+    .btn-back-topbar:hover { background: rgba(26,86,196,.15); border-color: var(--gold2); }
+
+    /* ── SIDEBAR LINE ────────────────────────────────────────────────────────── */
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: 3px; height: 100vh;
+      background: linear-gradient(180deg, var(--gold1) 0%, var(--gold3) 50%, var(--silver2) 100%);
+      z-index: 1001;
+    }
+
+    /* ── UPLOAD SCREEN ─────────────────────────────────────────────────────── */
+    .upload-screen {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.75rem;
+      padding: 88px 2rem 2.5rem 2.5rem;
+      min-height: 100vh;
+      align-items: start;
+      background: var(--bg0);
+    }
+
+    .upload-hero {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 1.5rem 0 .75rem;
+    }
+    .upload-hero .main-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.1rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      background: linear-gradient(90deg, var(--gold3), var(--silver3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.15;
+      margin-bottom: .3rem;
+    }
+    .upload-hero .sub {
+      color: var(--silver1);
+      font-size: .85rem;
+      margin-top: .35rem;
+      letter-spacing: .03em;
+    }
+
+    .upload-panel {
+      border: 2px dashed rgba(90,155,255,.35);
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      background: var(--bg1);
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      align-self: start;
+      border-top: 2px solid var(--gold1);
+    }
+    .upload-panel:hover,
+    .upload-panel.drag-over {
+      background: var(--bg2);
+      border-color: var(--gold3);
+      border-top-color: var(--gold2);
+    }
+    .upload-panel .icon { font-size: 2.2rem; margin-bottom: .65rem; }
+    .upload-panel .up-title {
+      color: var(--silver3);
+      font-weight: 600;
+      font-size: .95rem;
+      margin-bottom: .35rem;
+    }
+    .upload-panel .up-sub {
+      color: var(--silver1);
+      font-size: .78rem;
+      line-height: 1.55;
+    }
+
+    .manual-panel {
+      background: var(--bg1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      border: 1px solid rgba(26,86,196,.22);
+      border-top: 2px solid var(--gold1);
+      align-self: start;
+      display: flex;
+      flex-direction: column;
+    }
+    .manual-panel .mp-title {
+      color: var(--silver3);
+      font-weight: 600;
+      font-size: .9rem;
+      margin-bottom: .4rem;
+    }
+    .manual-panel .mp-sub {
+      color: var(--silver1);
+      font-size: .76rem;
+      margin-bottom: .9rem;
+      line-height: 1.55;
+    }
+    .paste-area {
+      width: 100%;
+      flex: 1;
+      min-height: 300px;
+      background: var(--bg0);
+      border: 1px solid rgba(26,86,196,.25);
+      border-radius: 8px;
+      color: var(--silver2);
+      padding: .8rem 1rem;
+      font-size: .79rem;
+      font-family: 'Space Mono', monospace;
+      line-height: 1.65;
+      resize: vertical;
+      transition: border-color .2s;
+    }
+    .paste-area:focus { outline: none; border-color: var(--gold2); }
+    .paste-actions { display: flex; gap: .65rem; margin-top: .65rem; }
+    .btn-example {
+      background: transparent;
+      border: 1px solid rgba(26,86,196,.3);
+      color: var(--silver1);
+      padding: .4rem .9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: .75rem;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-example:hover { border-color: var(--gold3); color: var(--gold3); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold1), var(--gold2));
+      color: var(--white);
+      font-weight: 700;
+      font-size: .9rem;
+      border: none;
+      border-radius: 8px;
+      padding: .7rem 2rem;
+      cursor: pointer;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      transition: opacity .2s;
+      width: 100%;
+      margin-top: .5rem;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: .85; }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── DASHBOARD ─────────────────────────────────────────────────────────── */
+    .dashboard {
+      display: none;
+      background: var(--bg0);
+      min-height: 100vh;
+      padding-top: 56px;
+    }
+
+    /* Veredicto */
+    .veredicto-bar {
+      padding: 1.1rem 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      border-bottom: 1px solid rgba(26,86,196,.18);
+    }
+    .veredicto-bar.no-comprar  { background: rgba(125,31,26,.25); border-left: 4px solid var(--red); }
+    .veredicto-bar.buena-senal { background: rgba(15,92,50,.2);   border-left: 4px solid var(--green); }
+    .veredicto-badge {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .no-comprar  .veredicto-badge { color: #E05A50; }
+    .buena-senal .veredicto-badge { color: #2ABF72; }
+    .veredicto-sub { color: var(--silver1); font-size: .84rem; }
+
+    /* Empresa name */
+    .empresa-name {
+      color: var(--white);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      padding: 1rem 2.5rem .4rem;
+      letter-spacing: .04em;
+      background: linear-gradient(90deg, var(--gold3), var(--silver3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-sub {
+      color: var(--silver1);
+      font-size: .74rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 0 2.5rem .75rem;
+    }
+
+    /* KPI Row */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: .85rem;
+      padding: .75rem 2rem 1.25rem;
+      background: var(--bg0);
+    }
+    .kpi-card {
+      background: var(--bg1);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      border-top: 2px solid var(--gold1);
+      border: 1px solid rgba(26,86,196,.2);
+      border-top: 2px solid var(--gold1);
+    }
+    .kpi-card.cumple   { border-top-color: var(--green); }
+    .kpi-card.nocumple { border-top-color: var(--red); }
+    .kpi-label {
+      color: var(--silver1);
+      font-size: .67rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      margin-bottom: .3rem;
+    }
+    .kpi-value {
+      font-family: 'Space Mono', monospace;
+      color: var(--white);
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin: .15rem 0;
+      background: linear-gradient(90deg, var(--gold3), var(--silver3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .kpi-sub { font-size: .7rem; font-weight: 600; }
+    .kpi-card.cumple   .kpi-sub { color: #2ABF72; }
+    .kpi-card.nocumple .kpi-sub { color: #E05A50; }
+    .kpi-card.neutral  .kpi-sub { color: var(--gold3); }
+
+    /* Sections */
+    .section {
+      margin: 1.25rem 2rem;
+      background: var(--bg1);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(26,86,196,.2);
+      box-shadow: 0 2px 16px rgba(5,8,15,.4);
+    }
+    .section-header {
+      background: linear-gradient(135deg, var(--gold1), #1A4FAA);
+      padding: .65rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .section-letter {
+      background: rgba(90,155,255,.2);
+      color: var(--gold3);
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: .8rem;
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid rgba(90,155,255,.3);
+    }
+    .section-title {
+      color: var(--white);
+      font-weight: 600;
+      font-size: .85rem;
+      letter-spacing: .04em;
+    }
+
+    /* Eval blocks */
+    .eval-block {
+      border-bottom: 1px solid rgba(26,86,196,.14);
+      padding: .85rem 1.25rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: start;
+    }
+    .eval-block:last-child { border-bottom: none; }
+    .eval-label {
+      font-weight: 600;
+      color: var(--silver3);
+      font-size: .85rem;
+      margin-bottom: .25rem;
+    }
+    .eval-detail { font-size: .77rem; color: var(--silver1); line-height: 1.55; }
+    .eval-detail .key { font-weight: 700; color: var(--silver2); font-family: 'Space Mono', monospace; font-size: .72rem; }
+
+    /* Badges */
+    .badge {
+      padding: .28rem .75rem;
+      border-radius: 20px;
+      font-size: .68rem;
+      font-weight: 700;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .badge.cumple   { background: rgba(26,138,74,.18); color: #2ABF72; border: 1px solid rgba(26,138,74,.35); }
+    .badge.nocumple { background: rgba(192,57,43,.18);  color: #E05A50; border: 1px solid rgba(192,57,43,.35); }
+    .badge.faltante { background: rgba(107,130,158,.12); color: var(--silver1); border: 1px solid rgba(107,130,158,.25); }
+
+    /* Charts */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.1rem;
+      padding: 0 1.25rem 1.25rem;
+    }
+    .charts-grid.full { grid-template-columns: 1fr; }
+    .charts-grid.col3 { grid-template-columns: 1fr 1fr 1fr; }
+    .chart-container {
+      background: var(--bg0);
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid rgba(26,86,196,.15);
+      transition: border-color .2s;
+    }
+    .chart-container:hover { border-color: rgba(26,86,196,.3); }
+    .chart-title {
+      color: var(--silver2);
+      font-weight: 600;
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: .7rem;
+    }
+
+    /* Trampa table */
+    .trampa-table { width: 100%; border-collapse: collapse; font-size: .79rem; }
+    .trampa-table th {
+      background: linear-gradient(135deg, var(--gold1), #1A4FAA);
+      color: var(--white);
+      padding: .55rem .85rem;
+      text-align: left;
+      font-size: .69rem;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      font-weight: 600;
+    }
+    .trampa-table td {
+      padding: .52rem .85rem;
+      border-bottom: 1px solid rgba(26,86,196,.12);
+      color: var(--silver2);
+    }
+    .trampa-table tr:nth-child(even) td { background: rgba(26,86,196,.06); }
+
+    /* Summary grid */
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .summary-col { padding: 1.1rem; }
+    .summary-col.cumple   { background: rgba(26,138,74,.12); }
+    .summary-col.nocumple { background: rgba(192,57,43,.12); }
+    .summary-col.faltante { background: rgba(26,86,196,.06); }
+    .col-title {
+      font-weight: 700;
+      font-size: .78rem;
+      margin-bottom: .55rem;
+      padding-bottom: .35rem;
+      border-bottom: 2px solid currentColor;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .summary-col.cumple   .col-title { color: #2ABF72; }
+    .summary-col.nocumple .col-title { color: #E05A50; }
+    .summary-col.faltante .col-title { color: var(--silver1); }
+    .summary-col ul { margin: 0; padding: 0; list-style: none; }
+    .summary-col ul li { font-size: .74rem; padding: .2rem 0; line-height: 1.4; }
+    .summary-col ul li::before { content: "· "; font-weight: 700; }
+    .summary-col.cumple   ul li { color: #2ABF72; }
+    .summary-col.nocumple ul li { color: #E05A50; }
+    .summary-col.faltante ul li { color: var(--silver1); }
+
+    /* Conclusion */
+    .conclusion-box {
+      background: var(--bg0);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 1rem 1.25rem 1.25rem;
+      border: 1px solid rgba(26,86,196,.2);
+    }
+    .conclusion-title {
+      background: linear-gradient(135deg, var(--gold1), #1A4FAA);
+      color: var(--white);
+      font-weight: 700;
+      font-size: .8rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      padding: .65rem 1.25rem;
+    }
+    .conclusion-body {
+      padding: 1.25rem;
+      color: var(--silver1);
+      font-size: .84rem;
+      line-height: 1.65;
+    }
+    .conclusion-body strong { color: var(--silver3); }
+    .verdict-text {
+      color: var(--gold3);
+      font-style: italic;
+    }
+
+    /* Footer */
+    .dash-footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--gray2);
+      font-size: .72rem;
+      border-top: 1px solid rgba(26,86,196,.15);
+      letter-spacing: .03em;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .upload-screen { grid-template-columns: 1fr; padding: 80px 1rem 2rem; }
+      .kpi-row       { grid-template-columns: repeat(3, 1fr); }
+      .charts-grid   { grid-template-columns: 1fr !important; }
+      .summary-grid  { grid-template-columns: 1fr; }
+      .section       { margin: 1rem .75rem; }
+      .topbar-sub    { display: none; }
+    }
+    @media (max-width: 600px) {
+      .kpi-row       { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar line -->
+<div class="sidebar"></div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <a href="/" style="display:flex;align-items:center;gap:.5rem;text-decoration:none;flex-shrink:0">
+    <svg width="26" height="26" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="ricircle" cx="50%" cy="35%" r="60%"><stop offset="0%" stop-color="#5A9BFF"/><stop offset="100%" stop-color="#0D2870"/></radialGradient>
+        <radialGradient id="riglow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(90,155,255,0.35)"/><stop offset="100%" stop-color="rgba(13,40,112,0)"/></radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="31" fill="url(#riglow)"/>
+      <circle cx="32" cy="32" r="26" fill="url(#ricircle)"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+      <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+      <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+      <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+      <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+    </svg>
+    <span style="font-size:.78rem;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.04em">Círculo Azul</span>
+  </a>
+  <div class="topbar-divider"></div>
+  <div class="topbar-title">ROImp vs WACC</div>
+  <div class="topbar-sub">Análisis de Rentabilidad Estructural</div>
+  <button class="btn-back-topbar" id="btn-back-topbar" onclick="resetDashboard()" style="display:none">← Nuevo análisis</button>
+  <button class="btn-back-topbar" id="btn-roimp-hist" onclick="openROImpHist()" style="display:none">📋 Historial</button>
+  <div id="roimp-dash-actions" style="display:none;gap:.5rem;align-items:center">
+    <button class="btn-back-topbar" style="display:inline-flex" onclick="saveROImpAnalisis()">💾 Guardar</button>
+    <button class="btn-back-topbar" style="display:inline-flex" onclick="shareROImpAnalisis()">🔗 Compartir</button>
+    <button class="btn-back-topbar" style="display:inline-flex" onclick="verROImpPDF()">👁 Ver PDF</button>
+    <button class="btn-back-topbar" style="display:inline-flex" onclick="exportROImpPDF()">⬇ PDF</button>
+    <button class="btn-back-topbar" style="display:inline-flex" onclick="openROImpConfig()">⚙ Secciones</button>
+    <button class="btn-back-topbar" style="display:inline-flex" onclick="openComparePanelROImp()">⚖ Comparar</button>
+  </div>
+</div>
+
+<!-- ═══ PANTALLA DE ENTRADA ════════════════════════════════════════════════════ -->
+<div id="upload-screen" class="upload-screen">
+
+  <div class="upload-hero">
+    <div class="main-title">ANÁLISIS FINANCIERO ESTRUCTURAL</div>
+    <div class="sub">ROImp vs WACC — Evaluación de Rentabilidad y Destrucción de Valor</div>
+  </div>
+
+  <!-- Subir archivo -->
+  <div class="upload-panel" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="icon">📄</div>
+    <div class="up-title">Subir archivo .docx</div>
+    <div class="up-sub">Arrastrá o hacé click para seleccionar<br>el archivo con los datos financieros</div>
+    <input type="file" id="file-input" accept=".docx" style="display:none">
+  </div>
+
+  <!-- Panel pegado de datos -->
+  <div class="manual-panel">
+    <div class="mp-title">📋 Pegá los datos financieros</div>
+    <div class="mp-sub">Copiá cualquier texto con los datos (de tu informe, Excel, Word o similar) y pegalo acá.<br>El sistema detecta los valores automáticamente sin importar el formato.</div>
+    <div id="ca-search-roimp"></div>
+    <textarea id="paste-area" class="paste-area"
+      placeholder="Pegá aquí el texto con los datos financieros. Ejemplos de formatos aceptados:
+
+EV/EBIT  34.7x
+WACC  9.3%
+ROIC  8.6%
+Deuda Neta  -$1,024B
+FCF  $354.6M
+...
+
+O hacé clic en 'Cargar ejemplo' para ver el formato."></textarea>
+    <div class="paste-actions">
+      <button class="btn-example" onclick="loadExample()">📝 Cargar ejemplo</button>
+      <button class="btn-example" onclick="openROImpHist()" style="color:#5A9BFF;border-color:rgba(26,86,196,.4)">📋 Mis análisis</button>
+      <button class="btn-example" onclick="document.getElementById('paste-area').value=''" style="margin-left:auto">🗑 Limpiar</button>
+    </div>
+    <button class="btn-primary" onclick="runManual()">ANALIZAR →</button>
+  </div>
+
+</div>
+
+<!-- ═══ DASHBOARD ══════════════════════════════════════════════════════════════ -->
+<div id="dashboard" class="dashboard">
+
+  <!-- Compare section -->
+  <div id="roimp-sec-compare" style="display:none;background:var(--bg1);border:1px solid rgba(26,86,196,.25);border-radius:12px;margin:1.25rem 2.5rem 0;padding:1.25rem">
+    <div style="font-size:.95rem;font-weight:700;color:var(--gold3);margin-bottom:1rem;text-transform:uppercase;letter-spacing:.06em">⚖ COMPARACIÓN DE EMPRESAS</div>
+    <div id="roimp-compare-header-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem"></div>
+    <div id="roimp-compare-table-wrap"></div>
+    <div id="roimp-compare-ia-wrap" style="display:none;margin-top:1.2rem;background:rgba(90,155,255,.05);border:1px solid rgba(90,155,255,.18);border-radius:10px;padding:1.2rem">
+      <div style="font-size:.78rem;font-weight:700;color:var(--gold3);letter-spacing:.08em;margin-bottom:.8rem;text-transform:uppercase">Análisis Comparativo IA</div>
+      <div id="roimp-compare-ia-text" style="font-size:.83rem;color:var(--silver2);line-height:1.7"></div>
+    </div>
+    <button onclick="closeROImpCompare()" style="margin-top:1rem;background:transparent;border:1px solid rgba(26,86,196,.3);color:var(--gray2);padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-size:.78rem">Cerrar comparación ✕</button>
+  </div>
+
+  <!-- Empresa + subtítulo -->
+  <div class="empresa-name" id="empresa-name">—</div>
+  <div class="header-sub">Análisis Estructural ROImp vs WACC</div>
+
+  <!-- Veredicto -->
+  <div id="veredicto-bar" class="veredicto-bar">
+    <div class="veredicto-badge" id="veredicto-badge">—</div>
+    <div class="veredicto-sub" id="veredicto-sub"></div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-row" id="kpi-row"></div>
+
+  <!-- A: ROImp -->
+  <div class="section" id="sec-a">
+    <div class="section-header">
+      <div class="section-letter">A</div>
+      <div class="section-title">RENDIMIENTO OPERATIVO IMPLÍCITO ( ROImp )</div>
+    </div>
+    <div id="section-a-content"></div>
+    <div style="padding:0 1.25rem 1.25rem">
+      <div class="charts-grid">
+        <div class="chart-container" style="height:255px">
+          <div class="chart-title">ROImp vs WACC vs ROIC — Comparativa</div>
+          <canvas id="chart-roimp"></canvas>
+        </div>
+        <div class="chart-container" style="height:255px">
+          <div class="chart-title">Medidor ROImp — Gauge de rentabilidad</div>
+          <canvas id="chart-gauge"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Trampas -->
+  <div class="section" id="sec-b">
+    <div class="section-header">
+      <div class="section-letter">B</div>
+      <div class="section-title">TRAMPAS COMUNES — RATIOS QUE PUEDEN ENGAÑAR</div>
+    </div>
+    <div id="section-b-content"></div>
+    <div style="padding:0 1.25rem 1.25rem">
+      <div class="chart-container" style="height:240px">
+        <div class="chart-title">Valor actual vs Referencia por ratio</div>
+        <canvas id="chart-trampas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: Cuándo ignorar -->
+  <div class="section" id="sec-c">
+    <div class="section-header">
+      <div class="section-letter">C</div>
+      <div class="section-title">CUÁNDO IGNORAR ROImp &lt; WACC — Condiciones de excepción</div>
+    </div>
+    <div id="section-c-content"></div>
+  </div>
+
+  <!-- D: Deuda -->
+  <div class="section" id="sec-d">
+    <div class="section-header">
+      <div class="section-letter">D</div>
+      <div class="section-title">DEUDA NETA — ESTRUCTURA Y CLASIFICACIÓN</div>
+    </div>
+    <div id="section-d-content"></div>
+    <div style="padding:0 1.25rem 1.25rem">
+      <div class="charts-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="chart-container" style="height:260px">
+          <div class="chart-title">Composición Deuda Neta</div>
+          <canvas id="chart-deuda"></canvas>
+        </div>
+        <div class="chart-container" style="height:260px">
+          <div class="chart-title">Ratios de Deuda vs Umbrales</div>
+          <canvas id="chart-ratios"></canvas>
+        </div>
+        <div class="chart-container" style="height:260px">
+          <div class="chart-title">FCF, EBIT y Estructura de Capital</div>
+          <canvas id="chart-fcf"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- G: EV/FCF -->
+  <div class="section" id="sec-g">
+    <div class="section-header">
+      <div class="section-letter">G</div>
+      <div class="section-title">EV / FCF — VALIDACIÓN DEL MÚLTIPLO</div>
+    </div>
+    <div id="section-g-content"></div>
+  </div>
+
+  <!-- H: Congruencia de ORO -->
+  <div class="section" id="sec-h">
+    <div class="section-header">
+      <div class="section-letter">H</div>
+      <div class="section-title">CONGRUENCIA DE ORO — 5 CONDICIONES SIMULTÁNEAS</div>
+    </div>
+    <div id="section-h-content"></div>
+    <div style="padding:0 1.25rem 1.25rem">
+      <div class="chart-container" style="height:290px">
+        <div class="chart-title">Radar — Perfil de Congruencia ORO vs Ideal</div>
+        <canvas id="chart-radar-oro"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- I: Sensibilidad -->
+  <div class="section" id="sec-i">
+    <div class="section-header">
+      <div class="section-letter">I</div>
+      <div class="section-title">ANÁLISIS DE SENSIBILIDAD — Curva ROImp vs EV/EBIT</div>
+    </div>
+    <div style="padding:1rem 1.25rem 1.25rem">
+      <div class="chart-container" style="height:270px">
+        <div class="chart-title">ROImp = f(EV/EBIT) — Break-even respecto a WACC y WACC+1.5%</div>
+        <canvas id="chart-sens"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resumen Final -->
+  <div class="section" id="sec-resumen">
+    <div class="section-header">
+      <div class="section-letter">∑</div>
+      <div class="section-title">RESUMEN FINAL — CUADRO DE SITUACIÓN</div>
+    </div>
+    <div class="summary-grid" id="summary-grid"></div>
+    <div style="padding:.75rem 1.25rem 1.25rem">
+      <div class="charts-grid">
+        <div class="chart-container" style="height:220px">
+          <div class="chart-title">Score de Salud Financiera</div>
+          <canvas id="chart-score"></canvas>
+        </div>
+        <div class="chart-container" style="height:220px">
+          <div class="chart-title">Distribución de Criterios</div>
+          <canvas id="chart-dashboard"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="conclusion-box">
+      <div class="conclusion-title">CONCLUSIÓN OPERATIVA</div>
+      <div class="conclusion-body" id="conclusion-body"></div>
+    </div>
+  </div>
+
+  <div class="dash-footer">
+    Análisis generado aplicando el marco ROImp vs WACC —
+    <em>Estabilidad SIN rentabilidad = NO ES SUFICIENTE</em>
+  </div>
+
+</div>
+
+<!-- ── Share Toast ──────────────────────────────────────────────────────────── -->
+<div id="roimp-share-toast" style="position:fixed;bottom:2.5rem;left:50%;transform:translateX(-50%) translateY(1.5rem);background:rgba(26,86,196,.96);color:#fff;padding:.55rem 1.5rem;border-radius:99px;font-size:.82rem;font-weight:600;letter-spacing:.02em;opacity:0;transition:opacity .3s,transform .3s;z-index:99999;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)">✓ Acción completada</div>
+
+<!-- ── Historial overlay + panel ────────────────────────────────────────────── -->
+<div id="roimp-hist-overlay" onclick="closeROImpHist()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;backdrop-filter:blur(3px)"></div>
+<div id="roimp-hist-panel" style="position:fixed;top:0;right:-440px;width:420px;height:100vh;background:#080E1A;border-left:1px solid rgba(26,86,196,.3);z-index:9999;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-10px 0 48px rgba(0,0,0,.75)">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:1.1rem 1.4rem;border-bottom:1px solid rgba(26,86,196,.18);flex-shrink:0">
+    <div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:#D8E6F5;font-weight:700;letter-spacing:.03em">📋 Historial ROImp</div>
+      <div style="font-size:.7rem;color:#3d5a7a;margin-top:.15rem">Análisis guardados localmente</div>
+    </div>
+    <button onclick="closeROImpHist()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);color:#8FA8C8;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+  </div>
+  <div id="roimp-hist-list" style="flex:1;overflow-y:auto;padding:1rem;scrollbar-width:thin;scrollbar-color:rgba(26,86,196,.3) transparent"></div>
+</div>
+
+<!-- ── Configurar secciones overlay + panel ─────────────────────────────────── -->
+<div id="roimp-config-overlay" onclick="closeROImpConfig()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;backdrop-filter:blur(3px)"></div>
+<div id="roimp-config-panel" style="position:fixed;top:0;right:-380px;width:360px;height:100vh;background:#080E1A;border-left:1px solid rgba(26,86,196,.3);z-index:9999;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-10px 0 48px rgba(0,0,0,.75)">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:1.1rem 1.4rem;border-bottom:1px solid rgba(26,86,196,.18);flex-shrink:0">
+    <div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:#D8E6F5;font-weight:700;letter-spacing:.03em">⚙ Configurar Reporte</div>
+      <div style="font-size:.7rem;color:#3d5a7a;margin-top:.15rem">Mostrá u ocultá secciones</div>
+    </div>
+    <button onclick="closeROImpConfig()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);color:#8FA8C8;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+  </div>
+  <div id="roimp-config-list" style="flex:1;overflow-y:auto;padding:1.25rem;scrollbar-width:thin;scrollbar-color:rgba(26,86,196,.3) transparent"></div>
+</div>
+
+<!-- ── Compare panel ROImp ─────────────────────────────────────────────── -->
+<div id="compare-overlay-roimp" onclick="closeComparePanelROImp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;backdrop-filter:blur(3px)"></div>
+<div id="compare-panel-roimp" style="position:fixed;top:0;right:-440px;width:420px;height:100vh;background:var(--bg1);border-left:1px solid rgba(26,86,196,.3);z-index:9999;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(5,8,15,.7)">
+  <div style="background:var(--bg0);color:var(--silver3);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(26,86,196,.2)">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700">⚖ Comparar con otra empresa</div>
+    <button onclick="closeComparePanelROImp()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--silver1);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:1rem;background:var(--bg1);color:var(--silver2)">
+    <p style="color:var(--gray2);font-size:.78rem;margin-bottom:.85rem;line-height:1.5">Comparar <span id="roimp-compare-empresa-a" style="color:var(--gold3)">empresa actual</span> con:</p>
+    <div id="ca-search-compare-roimp"></div>
+    <div style="font-size:.7rem;color:var(--gray2);margin:.4rem 0 .6rem;text-align:center;letter-spacing:.04em">— o pegá los datos manualmente —</div>
+    <textarea id="roimp-compare-paste-b" placeholder="Pegá aquí los datos financieros de la segunda empresa..." style="width:100%;height:160px;background:var(--bg0);border:1px solid rgba(26,86,196,.25);border-radius:8px;color:var(--silver3);padding:.6rem .8rem;font-size:.78rem;resize:vertical;font-family:inherit;line-height:1.5;outline:none"></textarea>
+    <div id="roimp-compare-error" style="display:none;color:#e74c3c;font-size:.76rem;margin-top:.5rem;padding:.4rem .6rem;background:rgba(231,76,60,.1);border-radius:5px"></div>
+    <div style="margin-top:.75rem;display:flex;gap:.5rem">
+      <button onclick="runROImpCompare()" style="flex:1;background:var(--gold2);border:none;color:var(--bg0);padding:.55rem;border-radius:7px;font-weight:700;font-size:.82rem;cursor:pointer">COMPARAR →</button>
+      <button onclick="closeComparePanelROImp()" style="background:transparent;border:1px solid rgba(26,86,196,.3);color:var(--gray2);padding:.55rem .9rem;border-radius:7px;cursor:pointer;font-size:.82rem">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="parser.js"></script>
+<script src="calculator.js"></script>
+<script src="charts.js"></script>
+<script src="renderer.js"></script>
+<script src="main.js"></script>
+<script src="/js/empresa-search.js"></script>
+<script>
+EmpresaSearch.init({ wrapperId: 'ca-search-roimp', textareaId: 'paste-area', formato: 'roimp' });
+EmpresaSearch.init({ wrapperId: 'ca-search-compare-roimp', textareaId: 'roimp-compare-paste-b', formato: 'roimp' });
+</script>
+<script>
+// ── COMPARAR EMPRESAS — ROImp ─────────────────────────────────────────────
+var _roimpCompareDataB    = null;
+var _roimpCompareResultsB = null;
+var _roimpCompareEmpresaB = '';
+
+function openComparePanelROImp() {
+  var el = document.getElementById('roimp-compare-empresa-a');
+  var empA = document.getElementById('empresa-name') ? document.getElementById('empresa-name').textContent : 'empresa actual';
+  if (el) el.textContent = empA || 'empresa actual';
+  document.getElementById('roimp-compare-error').style.display = 'none';
+  document.getElementById('compare-overlay-roimp').style.display = 'block';
+  requestAnimationFrame(function(){ document.getElementById('compare-panel-roimp').style.right = '0'; });
+}
+
+function closeComparePanelROImp() {
+  document.getElementById('compare-panel-roimp').style.right = '-440px';
+  setTimeout(function(){ document.getElementById('compare-overlay-roimp').style.display = 'none'; }, 320);
+}
+
+function runROImpCompare() {
+  var raw = (document.getElementById('roimp-compare-paste-b').value || '').trim();
+  var errEl = document.getElementById('roimp-compare-error');
+  if (!raw) { errEl.style.display = 'block'; errEl.textContent = 'Pegá los datos de la segunda empresa antes de comparar.'; return; }
+  errEl.style.display = 'none';
+  try {
+    var dataB   = FinancialParser.parseText(raw);
+    var resB    = Calculator.evaluate(dataB);
+    _roimpCompareDataB    = dataB;
+    _roimpCompareResultsB = resB;
+    var empresaMatch = raw.match(/(?:empresa|company|ticker|accion)[:\s]+([\w\s\.]+)/i);
+    _roimpCompareEmpresaB = empresaMatch ? empresaMatch[1].trim().split('\n')[0] : 'Empresa B';
+    closeComparePanelROImp();
+    renderROImpCompareSection();
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Error al procesar los datos: ' + e.message;
+  }
+}
+
+function closeROImpCompare() {
+  _roimpCompareDataB = null; _roimpCompareResultsB = null; _roimpCompareEmpresaB = '';
+  var sec = document.getElementById('roimp-sec-compare');
+  if (sec) sec.style.display = 'none';
+}
+
+function renderROImpCompareSection() {
+  var empA = document.getElementById('empresa-name') ? document.getElementById('empresa-name').textContent : 'Empresa A';
+  var empB = _roimpCompareEmpresaB;
+  var resA = typeof currentResults !== 'undefined' ? currentResults : null;
+  var resB = _roimpCompareResultsB;
+
+  // Helpers to extract values from Calculator.evaluate() results object
+  var getROImp = function(res) { return res && res.roimp_calc ? res.roimp_calc.value : null; };
+  var getWACC  = function(res) { return res && res.roic_vs_wacc ? res.roic_vs_wacc.wacc : null; };
+  var getROIC  = function(res) { return res && res.roic_vs_wacc ? res.roic_vs_wacc.value : null; };
+  var getEVEBIT= function(res) { return res && res.roimp_calc && res.roimp_calc.value ? (100/res.roimp_calc.value) : null; };
+  var getDNEBITDA = function(res) { return res && res.dn_ebitda ? res.dn_ebitda.value : null; };
+  var getFCFYield = function(res) { return res && res.fcf_yield ? res.fcf_yield.value : null; };
+  var getMgEBIT   = function(res) { return res && res.mg_ebit ? res.mg_ebit.value : null; };
+
+  // Header cards
+  var hdr = document.getElementById('roimp-compare-header-cards');
+  if (hdr) {
+    var makeCard = function(emp, res, isWinner) {
+      var roimpRaw = getROImp(res);
+      var waccRaw  = getWACC(res);
+      var roimpVal = roimpRaw != null ? roimpRaw.toFixed(2)+'%' : '—';
+      var waccVal  = waccRaw  != null ? waccRaw.toFixed(2)+'%' : '—';
+      var ok = roimpRaw != null && waccRaw != null && roimpRaw > waccRaw;
+      return '<div style="background:rgba(15,25,50,.6);border:2px solid '+(isWinner?'var(--gold3)':'rgba(26,86,196,.25)')+';border-radius:14px;padding:1.2rem;text-align:center">' +
+        (isWinner?'<div style="font-size:.6rem;color:var(--gold3);font-weight:700;letter-spacing:.1em;margin-bottom:.4rem">🏆 MEJOR ROImp</div>':'') +
+        '<div style="font-size:1.1rem;font-weight:800;color:var(--silver3);margin-bottom:.5rem">'+emp+'</div>' +
+        '<div style="font-size:2.2rem;font-weight:900;color:'+(ok?'var(--green)':'var(--red)')+';line-height:1">'+roimpVal+'</div>' +
+        '<div style="font-size:.65rem;color:var(--gray2);margin:.3rem 0 .4rem">ROImp</div>' +
+        '<div style="font-size:.85rem;color:var(--silver2)">WACC: <strong>'+waccVal+'</strong></div>' +
+        '<div style="margin-top:.5rem;font-size:.75rem;font-weight:700;color:'+(ok?'var(--green)':'var(--red)')+'">'+( ok ? '✅ ROImp > WACC' : (roimpRaw != null ? '⚠ ROImp ≤ WACC' : '— Sin datos') )+'</div>' +
+        '</div>';
+    };
+    var roimpA = getROImp(resA)||0, roimpB = getROImp(resB)||0;
+    hdr.innerHTML = makeCard(empA, resA, roimpA >= roimpB) + makeCard(empB, resB, roimpB > roimpA);
+  }
+
+  // Key metrics table
+  var wrap = document.getElementById('roimp-compare-table-wrap');
+  if (wrap) {
+    var rA_ri=getROImp(resA), rB_ri=getROImp(resB), rA_w=getWACC(resA), rB_w=getWACC(resB);
+    var KEY_METRICS = [
+      { label:'ROImp (%)', kA: rA_ri, kB: rB_ri, good: function(v){ return v>0; } },
+      { label:'WACC (%)', kA: rA_w, kB: rB_w, good: null },
+      { label:'Spread ROImp-WACC', kA: rA_ri!=null&&rA_w!=null?rA_ri-rA_w:null, kB: rB_ri!=null&&rB_w!=null?rB_ri-rB_w:null, good: function(v){ return v>0; } },
+      { label:'EV/EBIT (x)', kA: getEVEBIT(resA), kB: getEVEBIT(resB), good: function(v){ return v>=8&&v<=15; } },
+      { label:'ROIC (%)', kA: getROIC(resA), kB: getROIC(resB), good: function(v){ return v>20; } },
+      { label:'Deuda Neta/EBITDA', kA: getDNEBITDA(resA), kB: getDNEBITDA(resB), good: function(v){ return v<=1; } },
+      { label:'FCF Yield (%)', kA: getFCFYield(resA), kB: getFCFYield(resB), good: function(v){ return v>8; } },
+      { label:'Margen EBIT (%)', kA: getMgEBIT(resA), kB: getMgEBIT(resB), good: function(v){ return v>30; } },
+    ];
+    var fmtV = function(v) { return v!=null ? (typeof v==='number' ? v.toFixed(2) : v) : '—'; };
+    var tbl = '<table style="width:100%;border-collapse:collapse;font-size:.8rem">' +
+      '<thead><tr><th style="background:var(--bg2);color:var(--silver1);padding:.45rem .7rem;text-align:left;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Métrica</th>' +
+      '<th style="background:var(--bg2);color:var(--gold3);padding:.45rem .7rem;text-align:center;font-size:.7rem;font-weight:600">'+empA+'</th>' +
+      '<th style="background:var(--bg2);color:var(--gold3);padding:.45rem .7rem;text-align:center;font-size:.7rem;font-weight:600">'+empB+'</th>' +
+      '<th style="background:var(--bg2);color:var(--silver1);padding:.45rem .7rem;text-align:center;font-size:.7rem;font-weight:600">Mejor</th></tr></thead>' +
+      '<tbody>' + KEY_METRICS.map(function(m){
+        var vA=fmtV(m.kA), vB=fmtV(m.kB);
+        var winner = '';
+        if (m.kA!=null && m.kB!=null && m.good) {
+          var okA=m.good(m.kA), okB=m.good(m.kB);
+          if (okA && !okB) winner='▲ '+empA; else if (okB && !okA) winner='▲ '+empB;
+          else if (m.kA > m.kB) winner='▲ '+empA; else if (m.kB > m.kA) winner='▲ '+empB;
+        }
+        return '<tr><td style="padding:.42rem .7rem;border-bottom:1px solid rgba(26,86,196,.1);color:var(--silver2)">'+m.label+'</td>' +
+          '<td style="padding:.42rem .7rem;border-bottom:1px solid rgba(26,86,196,.1);text-align:center;color:var(--silver3)">'+vA+'</td>' +
+          '<td style="padding:.42rem .7rem;border-bottom:1px solid rgba(26,86,196,.1);text-align:center;color:var(--silver3)">'+vB+'</td>' +
+          '<td style="padding:.42rem .7rem;border-bottom:1px solid rgba(26,86,196,.1);text-align:center;font-size:.7rem;color:#4ADE80">'+winner+'</td></tr>';
+      }).join('') + '</tbody></table>';
+    wrap.innerHTML = tbl;
+  }
+
+  // IA
+  var iaWrap = document.getElementById('roimp-compare-ia-wrap');
+  if (iaWrap) {
+    iaWrap.style.display = 'block';
+    document.getElementById('roimp-compare-ia-text').innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;color:var(--gray2)"><div style="width:14px;height:14px;border:2px solid rgba(90,155,255,.3);border-top-color:var(--gold3);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0"></div>Generando análisis comparativo...</div>';
+    _runROImpCompareIA(empA, empB, resA, resB);
+  }
+
+  var sec = document.getElementById('roimp-sec-compare');
+  if (sec) { sec.style.display = 'block'; sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+async function _runROImpCompareIA(empA, empB, resA, resB) {
+  var fmtRes = function(res, emp) {
+    if (!res) return emp+': datos no disponibles';
+    var ri=getROImp(res), wc=getWACC(res), rc=getROIC(res), dn=getDNEBITDA(res), fy=getFCFYield(res);
+    return emp+' — ROImp: '+(ri!=null?ri.toFixed(2)+'%':'—')+
+      ', WACC: '+(wc!=null?wc.toFixed(2)+'%':'—')+
+      ', Spread: '+(ri!=null&&wc!=null?(ri-wc).toFixed(2)+' pp':'—')+
+      ', ROIC: '+(rc!=null?rc.toFixed(2)+'%':'—')+
+      ', Deuda Neta/EBITDA: '+(dn!=null?dn.toFixed(2)+'x':'—')+
+      ', FCF Yield: '+(fy!=null?fy.toFixed(2)+'%':'—');
+  };
+  var prompt = 'Comparás DOS empresas con el marco ROImp vs WACC.\n\n'+fmtRes(resA,empA)+'\n\n'+fmtRes(resB,empB)+'\n\nComparár el ROImp vs WACC de ambas, spread, rentabilidad estructural. Conclusión clara. Estructurá con: ## ROImp vs WACC, ## Rentabilidad, ## Deuda y Liquidez, ## Conclusión';
+  try {
+    var res = await fetch('/api/analisis', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto: fmtRes(resA,empA)+'\n---\n'+fmtRes(resB,empB), empresa: empA+' vs '+empB, prompt_extra: prompt })
+    });
+    var data = await res.json();
+    var texto = data.analisis || data.result || 'Sin respuesta del modelo.';
+    var el = document.getElementById('roimp-compare-ia-text');
+    if (el) el.innerHTML = texto.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/#{1,3} (.+)/g,'<h4 style="color:var(--gold3);margin:.7rem 0 .3rem">$1</h4>');
+  } catch(e) {
+    var el = document.getElementById('roimp-compare-ia-text');
+    if (el) el.innerHTML = '<span style="color:#e74c3c">Error al contactar IA: '+e.message+'</span>';
+  }
+}
+</script>
+<style>
+.ca-particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.ca-particle{position:absolute;border-radius:50%;opacity:0;animation:caFloat linear infinite}
+@keyframes caFloat{0%{opacity:0;transform:translateY(0) translateX(0)}10%{opacity:.4}90%{opacity:.15}100%{opacity:0;transform:translateY(-85vh) translateX(15px)}}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 70% 55% at 65% 30%,rgba(26,86,196,.13) 0%,transparent 65%),radial-gradient(ellipse 45% 40% at 10% 80%,rgba(46,116,232,.08) 0%,transparent 60%),radial-gradient(ellipse 30% 30% at 90% 85%,rgba(201,168,76,.06) 0%,transparent 55%)}
+</style>
+<script>
+(function(){var c=document.createElement('div');c.className='ca-particles';document.body.appendChild(c);for(var i=0;i<55;i++){var p=document.createElement('div');p.className='ca-particle';var gold=Math.random()>.65;p.style.cssText='left:'+Math.random()*100+'%;bottom:-8px;width:'+(1+Math.random()*2.5)+'px;height:'+(1+Math.random()*2.5)+'px;background:'+(gold?'rgba(201,168,76,.7)':'rgba(90,155,255,.5)')+';animation-duration:'+(9+Math.random()*14)+'s;animation-delay:'+(Math.random()*12)+'s';c.appendChild(p);}})();
+</script>
+</body>
+</html>

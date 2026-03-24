@@ -1,0 +1,8 @@
+node_modules/
+.env
+*.pdf
+__pycache__/
+*.pyc
+files/
+*.log
+.claude/

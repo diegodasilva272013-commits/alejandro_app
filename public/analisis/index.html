@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis IA — Círculo Azul Finanzas</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy:  #05080F;
+  --navy2: #080E1A;
+  --navy3: #0D1627;
+  --gold:  #C9A84C;
+  --blue:  #5A9BFF;
+  --blue2: #1A56C4;
+  --green: #4ade80;
+  --red:   #f87171;
+  --amber: #fbbf24;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--navy);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.app-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 200;
+  background: var(--navy);
+  display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem;
+  box-shadow: 0 2px 16px rgba(0,0,0,.5);
+  border-bottom: 1px solid rgba(201,168,76,.15);
+}
+.header-ca-brand {
+  display: flex; align-items: center; gap: .45rem;
+  text-decoration: none; flex-shrink: 0;
+}
+.header-ca-brand .topbar-brand-text { display:flex; flex-direction:column; line-height:1.1; }
+.header-ca-brand .topbar-brand-name { font-family:'Cormorant Garamond',serif; font-size:.9rem; font-weight:700; color:rgba(255,255,255,.85); letter-spacing:.04em; }
+.header-ca-brand .topbar-brand-sub  { font-size:.6rem; color:rgba(255,255,255,.4); letter-spacing:.1em; text-transform:uppercase; }
+.header-ca-brand:hover .topbar-brand-name { color:#fff; }
+.header-divider { width:1px; height:24px; background:rgba(255,255,255,.15); flex-shrink:0; }
+.header-name { font-family:'Cormorant Garamond',serif; font-size:1.1rem; font-weight:700; color:var(--gold); letter-spacing:.04em; }
+.header-tag  { font-size:.68rem; color:rgba(255,255,255,.4); letter-spacing:.12em; text-transform:uppercase; border-left:1px solid rgba(255,255,255,.1); padding-left:.8rem; }
+
+/* ── PANTALLAS ────────────────────────────────────────────── */
+#screen-input, #screen-progress, #screen-result {
+  padding-top: 56px;
+  min-height: 100vh;
+}
+#screen-progress, #screen-result { display: none; }
+
+/* ── HERO / INPUT ─────────────────────────────────────────── */
+.input-hero {
+  max-width: 760px; margin: 0 auto; padding: 5rem 1.5rem 2rem;
+  text-align: center;
+}
+.input-eyebrow {
+  font-size: .7rem; letter-spacing: .25em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 1.2rem;
+  display: flex; align-items: center; justify-content: center; gap: .6rem;
+}
+.input-eyebrow::before, .input-eyebrow::after {
+  content: ''; flex: 1; max-width: 60px; height: 1px; background: rgba(201,168,76,.3);
+}
+.input-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; line-height: 1.1;
+  margin-bottom: 1rem;
+}
+.input-title span { color: var(--gold); }
+.input-sub {
+  color: rgba(255,255,255,.55); font-size: .9rem; line-height: 1.7;
+  max-width: 520px; margin: 0 auto 2.5rem;
+}
+
+.input-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 600px; margin: 0 auto;
+}
+.inp-label { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.45); display: block; margin-bottom: .4rem; }
+.inp-row { display: flex; gap: .8rem; margin-bottom: 1rem; }
+.inp-field {
+  flex: 1; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px; padding: .7rem 1rem; color: #fff; font-size: .95rem;
+  font-family: 'Inter', sans-serif; outline: none; transition: border-color .2s;
+}
+.inp-field:focus { border-color: var(--blue); }
+.inp-field::placeholder { color: rgba(255,255,255,.25); }
+
+.btn-generar {
+  width: 100%; padding: .85rem; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, var(--gold), #a07830);
+  color: #0D1B3E; font-size: .95rem; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif; letter-spacing: .03em;
+  transition: opacity .2s, transform .1s;
+}
+.btn-generar:hover { opacity: .9; }
+.btn-generar:active { transform: scale(.99); }
+.btn-generar:disabled { opacity: .4; cursor: not-allowed; }
+
+.divider-or {
+  text-align: center; margin: 1rem 0;
+  font-size: .72rem; color: rgba(255,255,255,.25); letter-spacing: .1em;
+  position: relative;
+}
+.divider-or::before, .divider-or::after {
+  content: ''; position: absolute; top: 50%; height: 1px;
+  background: rgba(255,255,255,.08); width: calc(50% - 30px);
+}
+.divider-or::before { left: 0; }
+.divider-or::after  { right: 0; }
+
+.upload-zone {
+  border: 1px dashed rgba(255,255,255,.15); border-radius: 8px;
+  padding: 1.2rem; text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.upload-zone:hover { border-color: rgba(201,168,76,.4); background: rgba(201,168,76,.04); }
+.upload-zone p { font-size: .8rem; color: rgba(255,255,255,.35); margin-top: .3rem; }
+.upload-zone .uz-icon { font-size: 1.5rem; }
+#file-input { display: none; }
+#file-tag { display: none; font-size: .78rem; color: var(--gold); margin-top: .5rem; }
+
+.error-box {
+  display: none; background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.3);
+  border-radius: 6px; padding: .7rem 1rem; margin-top: .8rem;
+  font-size: .82rem; color: var(--red);
+}
+
+/* ── FEATURES GRID ────────────────────────────────────────── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  max-width: 760px; margin: 2rem auto 0; padding: 0 1.5rem 4rem;
+}
+.feat-card {
+  background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px; padding: 1.2rem;
+}
+.feat-icon { font-size: 1.4rem; margin-bottom: .6rem; }
+.feat-title { font-size: .82rem; font-weight: 600; color: rgba(255,255,255,.85); margin-bottom: .3rem; }
+.feat-desc  { font-size: .73rem; color: rgba(255,255,255,.4); line-height: 1.5; }
+
+/* ── PROGRESS ─────────────────────────────────────────────── */
+.progress-wrap {
+  max-width: 560px; margin: 0 auto; padding: 5rem 1.5rem;
+  text-align: center;
+}
+.progress-company {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.8rem; font-weight: 700; color: var(--gold);
+  margin-bottom: .3rem;
+}
+.progress-subtitle { font-size: .82rem; color: rgba(255,255,255,.45); margin-bottom: 2.5rem; }
+
+.progress-steps { text-align: left; margin-bottom: 2rem; }
+.step-item {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .8rem 1rem; border-radius: 8px; margin-bottom: .5rem;
+  transition: background .3s;
+}
+.step-item.active  { background: rgba(90,155,255,.08); border: 1px solid rgba(90,155,255,.2); }
+.step-item.done    { background: rgba(74,222,128,.06); border: 1px solid rgba(74,222,128,.2); }
+.step-item.waiting { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.06); }
+
+.step-icon {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1rem;
+}
+.step-item.active  .step-icon { background: rgba(90,155,255,.15); }
+.step-item.done    .step-icon { background: rgba(74,222,128,.15); }
+.step-item.waiting .step-icon { background: rgba(255,255,255,.05); }
+
+.step-text { flex: 1; }
+.step-title  { font-size: .85rem; font-weight: 600; }
+.step-detail { font-size: .73rem; color: rgba(255,255,255,.4); margin-top: .15rem; }
+.step-item.active .step-title  { color: var(--blue); }
+.step-item.done   .step-title  { color: var(--green); }
+.step-item.waiting .step-title { color: rgba(255,255,255,.4); }
+
+.step-spinner {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid rgba(90,155,255,.2);
+  border-top-color: var(--blue);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-bar-wrap {
+  background: rgba(255,255,255,.06); border-radius: 100px; height: 6px; overflow: hidden;
+  margin-bottom: .7rem;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 100px;
+  background: linear-gradient(90deg, var(--blue2), var(--blue));
+  transition: width .5s ease; width: 0%;
+}
+.progress-pct { font-size: .78rem; color: rgba(255,255,255,.4); }
+
+.progress-error {
+  display: none;
+  background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.3);
+  border-radius: 8px; padding: 1rem 1.2rem; margin-top: 1.5rem;
+  font-size: .85rem; color: var(--red); line-height: 1.5; text-align: left;
+}
+.btn-retry {
+  margin-top: 1rem; padding: .6rem 1.4rem; border: 1px solid rgba(248,113,113,.4);
+  background: transparent; border-radius: 6px; color: var(--red);
+  font-size: .8rem; cursor: pointer; font-family: 'Inter', sans-serif;
+}
+
+/* ── RESULT ───────────────────────────────────────────────── */
+.result-wrap { max-width: 1100px; margin: 0 auto; padding: 1.2rem 1.5rem 4rem; }
+
+.bullets-list { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+.bullet-item {
+  display: flex; gap: .7rem; align-items: flex-start;
+  padding: .7rem .9rem; border-radius: 6px; font-size: .82rem; line-height: 1.5;
+}
+.bullet-item.green { background: rgba(74,222,128,.06); border-left: 3px solid var(--green); }
+.bullet-item.red   { background: rgba(248,113,113,.06); border-left: 3px solid var(--red); }
+.bullet-item.amber { background: rgba(251,191,36,.06);  border-left: 3px solid var(--amber); }
+.bullet-dot { font-size: .9rem; flex-shrink: 0; margin-top: .05rem; }
+.bullet-inner strong { display: block; font-size: .8rem; margin-bottom: .15rem; }
+
+.tbl-simple { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.tbl-simple th {
+  text-align: left; padding: .5rem .7rem;
+  font-size: .65rem; letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255,255,255,.35); border-bottom: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.04);
+}
+.tbl-simple td { padding: .5rem .7rem; border-bottom: 1px solid rgba(255,255,255,.04); color: rgba(255,255,255,.8); }
+.tbl-simple tr:last-child td { border-bottom: none; }
+.tbl-simple tr:hover td { background: rgba(255,255,255,.02); }
+.tbl-simple td:first-child { color: var(--gold); font-size: .74rem; }
+
+/* ── RESULT SCREEN ───────────────────────────────────────── */
+.result-actions {
+  display: flex; align-items: center; gap: .8rem; padding: 1rem 0 1.2rem;
+  flex-wrap: wrap;
+}
+.btn-new {
+  padding: .45rem 1rem; border: 1px solid rgba(255,255,255,.15);
+  background: transparent; border-radius: 6px; color: rgba(255,255,255,.6);
+  font-size: .78rem; cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: color .15s, border-color .15s;
+}
+.btn-new:hover { color: #fff; border-color: rgba(255,255,255,.4); }
+.btn-download {
+  margin-left: auto; padding: .55rem 1.4rem;
+  background: linear-gradient(135deg, var(--gold), #a07830);
+  border: none; border-radius: 8px; color: #0D1B3E;
+  font-size: .82rem; font-weight: 700; cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: opacity .2s;
+}
+.btn-download:hover { opacity: .88; }
+
+/* ── REPORT COVER ────────────────────────────────────────── */
+.report-cover {
+  border-radius: 14px; overflow: hidden;
+  background: var(--navy2);
+  border: 1px solid rgba(201,168,76,.2);
+  margin-bottom: 1.2rem;
+}
+.cover-stripe {
+  height: 4px;
+  background: linear-gradient(90deg, var(--blue2), var(--gold), var(--blue2));
+}
+.cover-body-wrap {
+  padding: 1.8rem;
+}
+.cover-brand-row {
+  display: flex; align-items: center; gap: .8rem; margin-bottom: 1.4rem;
+  padding-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.cover-brand-row .topbar-logo-icon { width: 36px; height: 36px; }
+.cover-brand-txt .cb-name { font-family: 'Cormorant Garamond', serif; font-size: 1rem; font-weight: 700; color: rgba(255,255,255,.85); }
+.cover-brand-txt .cb-sub  { font-size: .62rem; color: rgba(255,255,255,.35); letter-spacing: .14em; text-transform: uppercase; }
+.cover-confidential { margin-left: auto; font-size: .65rem; color: var(--gold); letter-spacing: .16em; border: 1px solid rgba(201,168,76,.3); padding: .22rem .7rem; border-radius: 4px; }
+
+.cover-company-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.6rem; font-weight: 700; line-height: 1.05; color: #fff;
+  margin-bottom: .15rem;
+}
+.cover-ticker-line {
+  font-family: 'Space Mono', monospace; font-size: 1rem; color: var(--gold);
+  margin-bottom: 1rem;
+}
+.cover-rec-row {
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+.rec-badge {
+  padding: .45rem 1.4rem; border-radius: 6px; font-size: .9rem; font-weight: 800;
+  letter-spacing: .08em; flex-shrink: 0;
+}
+.rec-badge.BUY      { background: rgba(74,222,128,.15);  color: var(--green); border: 2px solid rgba(74,222,128,.4); }
+.rec-badge.HOLD     { background: rgba(251,191,36,.1);   color: var(--amber); border: 2px solid rgba(251,191,36,.3); }
+.rec-badge.ACUMULAR { background: rgba(90,155,255,.12);  color: var(--blue);  border: 2px solid rgba(90,155,255,.3); }
+.rec-badge.SELL     { background: rgba(248,113,113,.1);  color: var(--red);   border: 2px solid rgba(248,113,113,.3); }
+.rec-badge.VENDER   { background: rgba(248,113,113,.1);  color: var(--red);   border: 2px solid rgba(248,113,113,.3); }
+.hero-upside { font-family: 'Space Mono', monospace; font-size: .95rem; font-weight: 700; }
+
+.cover-metrics-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: .6rem;
+}
+.cov-metric {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px; padding: .7rem .9rem;
+}
+.cov-metric label {
+  display: block; font-size: .6rem; letter-spacing: .14em; text-transform: uppercase;
+  color: rgba(255,255,255,.35); margin-bottom: .3rem;
+}
+.cov-metric span {
+  font-family: 'Space Mono', monospace; font-size: .92rem; font-weight: 700; color: #fff;
+}
+
+/* ── REPORT SECTIONS ─────────────────────────────────────── */
+.report-section {
+  background: var(--navy2); border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px; overflow: hidden; margin-bottom: 1rem;
+}
+.report-sec-hdr {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .75rem 1.2rem;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+}
+.sec-tag {
+  font-size: .6rem; letter-spacing: .2em; font-weight: 700;
+  color: var(--blue2); text-transform: uppercase;
+  background: rgba(26,86,196,.15); border: 1px solid rgba(26,86,196,.3);
+  padding: .15rem .5rem; border-radius: 3px; flex-shrink: 0;
+}
+.sec-title {
+  font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 700;
+  color: var(--gold);
+}
+.report-sec-body { padding: 1.1rem 1.2rem; }
+
+/* within sections */
+.subsection-title {
+  font-size: .68rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: .7rem; font-weight: 600;
+}
+
+.charts-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.bull-bear-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 700px) { .charts-grid-2, .bull-bear-grid { grid-template-columns: 1fr; } }
+
+.chart-card {
+  background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.05);
+  border-radius: 8px; padding: 1rem;
+}
+.chart-hdr {
+  display: block; font-size: .65rem; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: .8rem; font-weight: 600;
+}
+.thesis-col {
+  border-radius: 8px; padding: 1rem;
+  background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.05);
+}
+.bull-col { border-left: 3px solid var(--green); }
+.bear-col { border-left: 3px solid var(--red); }
+.thesis-hdr { font-size: .82rem; font-weight: 700; margin-bottom: .8rem; }
+.green-txt { color: var(--green); }
+.red-txt   { color: var(--red); }
+
+.scorecard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+.sc-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .42rem .7rem; background: rgba(255,255,255,.04);
+  border-radius: 6px; border: 1px solid rgba(255,255,255,.05); gap: .5rem;
+}
+.sc-label { font-size: .68rem; color: rgba(255,255,255,.4); }
+.sc-val   { font-family: 'Space Mono', monospace; font-size: .76rem; color: var(--blue); font-weight: 700; white-space: nowrap; }
+
+/* conclusion box */
+.conclusion-box {
+  font-family: 'Cormorant Garamond', serif; font-size: 1.05rem;
+  color: rgba(255,255,255,.8); line-height: 1.85;
+  padding: 1.1rem 1.3rem;
+  background: rgba(201,168,76,.04);
+  border-left: 3px solid rgba(201,168,76,.4);
+  border-radius: 0 8px 8px 0;
+}
+.profile-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.profile-item {
+  background: rgba(255,255,255,.03); border-radius: 6px; padding: .55rem .85rem;
+  border-left: 2px solid rgba(90,155,255,.2);
+}
+.profile-item label { display: block; font-size: .6rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.3); margin-bottom: .2rem; }
+.profile-item span  { font-size: .82rem; color: rgba(255,255,255,.8); }
+.modelo-box {
+  margin-top: .8rem; padding: .85rem 1rem;
+  background: rgba(255,255,255,.03); border-radius: 6px;
+  font-size: .82rem; color: rgba(255,255,255,.6); line-height: 1.6;
+  border-left: 2px solid rgba(201,168,76,.3);
+}
+.fuentes-list div {
+  padding: .3rem 0; border-bottom: 1px solid rgba(255,255,255,.04);
+  font-size: .75rem; color: rgba(255,255,255,.38); line-height: 1.5;
+}
+.fuentes-list div:last-child { border-bottom: none; }
+.disclaimer-box {
+  padding: 1rem 1.2rem; background: rgba(255,255,255,.02); border-radius: 8px;
+  font-size: .73rem; color: rgba(255,255,255,.35); line-height: 1.7;
+}
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ═══════════════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <a href="/" class="header-ca-brand" title="Volver al menú principal">
+    <svg class="topbar-logo-icon" width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="tbcircle" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stop-color="#5A9BFF"/>
+          <stop offset="100%" stop-color="#0D2870"/>
+        </radialGradient>
+        <radialGradient id="tbglow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(90,155,255,0.35)"/>
+          <stop offset="100%" stop-color="rgba(13,40,112,0)"/>
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="31" fill="url(#tbglow)"/>
+      <circle cx="32" cy="32" r="26" fill="url(#tbcircle)"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+      <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+      <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+      <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+      <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+    </svg>
+    <div class="topbar-brand-text">
+      <span class="topbar-brand-name">Círculo Azul</span>
+      <span class="topbar-brand-sub">Finanzas</span>
+    </div>
+  </a>
+  <div class="header-divider"></div>
+  <span class="header-name">Análisis IA</span>
+  <span class="header-tag">Informe PDF Completo · Claude AI</span>
+</header>
+
+<!-- ══ SCREEN: INPUT ════════════════════════════════════════════════════════ -->
+<div id="screen-input">
+  <div class="input-hero">
+    <div class="input-eyebrow">Powered by Claude AI</div>
+    <h1 class="input-title">Análisis Financiero<br><span>Completo con IA</span></h1>
+    <p class="input-sub">Ingresá el nombre o ticker de cualquier empresa. La IA investiga, analiza 30+ métricas y genera un informe PDF profesional completo.</p>
+
+    <div class="input-card">
+      <div class="inp-row">
+        <div style="flex:2">
+          <label class="inp-label" for="inp-empresa">Empresa o Ticker</label>
+          <input class="inp-field" id="inp-empresa" type="text" placeholder="Ej: Apple, AAPL, Tesla, NVDA..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="uz-icon">📎</div>
+        <p>Adjuntá datos adicionales (opcional) — PDF, Excel, CSV</p>
+        <div id="file-tag"></div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,.xlsx,.xls,.csv">
+
+      <div style="margin-top:1.2rem">
+        <button class="btn-generar" id="btn-generar" onclick="iniciarAnalisis()">
+          Generar Análisis Completo →
+        </button>
+      </div>
+      <div class="error-box" id="error-box"></div>
+    </div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">🔍</div>
+      <div class="feat-title">Investigación en tiempo real</div>
+      <div class="feat-desc">Precios, revenue histórico, márgenes, KPIs operativos, balance y comparables del sector.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Análisis institucional</div>
+      <div class="feat-desc">DCF 3 escenarios, Monte Carlo, scorecard, MOAT, forense contable y mapa de riesgos.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <div class="feat-title">PDF profesional institucional</div>
+      <div class="feat-desc">Portada, gráficos Bloomberg, tesis bull/bear, conclusión y 15+ fuentes verificables.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: PROGRESS ══════════════════════════════════════════════════════ -->
+<div id="screen-progress">
+  <div class="progress-wrap">
+    <div class="progress-company" id="prog-empresa">—</div>
+    <div class="progress-subtitle">Generando análisis financiero completo…</div>
+
+    <div class="progress-steps">
+      <div class="step-item waiting" id="step-1">
+        <div class="step-icon">🔍</div>
+        <div class="step-text">
+          <div class="step-title">Investigando empresa</div>
+          <div class="step-detail">Precios, revenue, márgenes, balance, peers…</div>
+        </div>
+        <div class="step-status" id="ss-1"></div>
+      </div>
+      <div class="step-item waiting" id="step-2">
+        <div class="step-icon">🧠</div>
+        <div class="step-text">
+          <div class="step-title">Analizando datos financieros</div>
+          <div class="step-detail">DCF, scorecard, MOAT, riesgos, recomendación…</div>
+        </div>
+        <div class="step-status" id="ss-2"></div>
+      </div>
+      <div class="step-item waiting" id="step-3">
+        <div class="step-icon">📄</div>
+        <div class="step-text">
+          <div class="step-title">Construyendo PDF</div>
+          <div class="step-detail">6 gráficos Bloomberg, portada profesional…</div>
+        </div>
+        <div class="step-status" id="ss-3"></div>
+      </div>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+    <div class="progress-pct" id="progress-pct">0%</div>
+
+    <div class="progress-error" id="progress-error">
+      <strong>No se pudo completar el análisis</strong><br>
+      <span id="error-detail"></span>
+      <br><button class="btn-retry" onclick="volverInput()">← Intentar de nuevo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: RESULT ════════════════════════════════════════════════════════ -->
+<div id="screen-result">
+  <div class="result-wrap">
+
+    <!-- ACCIONES SUPERIORES -->
+    <div class="result-actions">
+      <button class="btn-new" onclick="volverInput()">← Nuevo análisis</button>
+      <button class="btn-download" id="btn-download" onclick="descargarPDF()">⬇ Descargar PDF</button>
+    </div>
+
+    <!-- ── PORTADA DEL REPORTE ───────────────────────────────────── -->
+    <div class="report-cover">
+      <div class="cover-stripe"></div>
+      <div class="cover-body-wrap">
+        <!-- Brand row -->
+        <div class="cover-brand-row">
+          <svg class="topbar-logo-icon" width="36" height="36" viewBox="0 0 64 64" fill="none">
+            <defs>
+              <radialGradient id="cvcircle" cx="50%" cy="35%" r="60%"><stop offset="0%" stop-color="#5A9BFF"/><stop offset="100%" stop-color="#0D2870"/></radialGradient>
+            </defs>
+            <circle cx="32" cy="32" r="26" fill="url(#cvcircle)"/>
+            <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+            <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+            <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+            <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+            <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+            <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+          </svg>
+          <div class="cover-brand-txt">
+            <div class="cb-name">Círculo Azul Finanzas</div>
+            <div class="cb-sub">Análisis Institucional · Powered by AI</div>
+          </div>
+          <span class="cover-confidential">CONFIDENCIAL</span>
+          <span id="res-fecha" style="font-size:.7rem;color:rgba(255,255,255,.3);margin-left:.8rem"></span>
+        </div>
+
+        <!-- Empresa info -->
+        <div class="cover-company-name" id="res-empresa">—</div>
+        <div class="cover-ticker-line" id="res-ticker-line"></div>
+
+        <!-- Rec + upside -->
+        <div class="cover-rec-row">
+          <span class="rec-badge" id="res-rec">—</span>
+          <span class="hero-upside" id="res-upside"></span>
+        </div>
+
+        <!-- Métricas clave -->
+        <div class="cover-metrics-row">
+          <div class="cov-metric"><label>Precio actual</label><span id="res-precio">—</span></div>
+          <div class="cov-metric"><label>Target mínimo</label><span id="res-target-lo" style="color:var(--gold)">—</span></div>
+          <div class="cov-metric"><label>Target máximo</label><span id="res-target-hi" style="color:var(--gold)">—</span></div>
+          <div class="cov-metric"><label>Horizonte</label><span id="res-horizonte">12 meses</span></div>
+          <div class="cov-metric"><label>Confianza</label><span id="res-confianza">—</span></div>
+          <div class="cov-metric"><label>Sector</label><span id="res-sector" style="font-size:.8rem">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEC 01 — RESUMEN EJECUTIVO ────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 01</span>
+        <span class="sec-title">Resumen Ejecutivo</span>
+      </div>
+      <div class="report-sec-body">
+        <ul class="bullets-list" id="res-bullets"></ul>
+      </div>
+    </div>
+
+    <!-- ── SEC 02 — SCORECARD + MÉTRICAS ────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 02</span>
+        <span class="sec-title">Scorecard Financiero</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="scorecard-grid" id="res-scorecard"></div>
+      </div>
+    </div>
+
+    <!-- ── SEC 03 — ANÁLISIS FINANCIERO — CHARTS ─────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 03</span>
+        <span class="sec-title">Análisis Financiero</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="charts-grid-2">
+          <div class="chart-card">
+            <span class="chart-hdr">📈 Revenue &amp; Net Income</span>
+            <div style="position:relative;height:210px"><canvas id="chart-revenue"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <span class="chart-hdr">🥧 Mix de Ingresos</span>
+            <div style="position:relative;height:210px"><canvas id="chart-mix"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-grid-2">
+          <div class="chart-card">
+            <span class="chart-hdr">📉 Evolución de Márgenes</span>
+            <div style="position:relative;height:200px"><canvas id="chart-margins"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <span class="chart-hdr">🗂️ Fuentes de Ingresos</span>
+            <table class="tbl-simple" id="res-ingresos-tabla"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEC 04 — P&L HISTÓRICO ────────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 04</span>
+        <span class="sec-title">Estado de Resultados Histórico</span>
+      </div>
+      <div class="report-sec-body">
+        <div style="overflow-x:auto"><table class="tbl-simple" id="res-pnl"></table></div>
+      </div>
+    </div>
+
+    <!-- ── SEC 04b — BALANCE GENERAL ─────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 04b</span>
+        <span class="sec-title">Balance General</span>
+      </div>
+      <div class="report-sec-body">
+        <div style="overflow-x:auto"><table class="tbl-simple" id="res-balance"></table></div>
+      </div>
+    </div>
+
+    <!-- ── SEC 04c — CASH FLOW ────────────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 04c</span>
+        <span class="sec-title">Estado de Flujo de Caja</span>
+      </div>
+      <div class="report-sec-body">
+        <div style="overflow-x:auto"><table class="tbl-simple" id="res-cashflow"></table></div>
+      </div>
+    </div>
+
+    <!-- ── SEC 03b — REVENUE TRIMESTRAL ──────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 03b</span>
+        <span class="sec-title">Evolución Trimestral — Últimos 8 Trimestres</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="chart-card">
+          <span class="chart-hdr">📊 Revenue &amp; Net Income Trimestral (M USD)</span>
+          <div style="position:relative;height:220px"><canvas id="chart-qtrs"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEC 05 — PERFIL DE EMPRESA + MÉTRICAS ─────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 05</span>
+        <span class="sec-title">Perfil &amp; Datos de Mercado</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="profile-pair" id="res-perfil"></div>
+        <div class="modelo-box" id="res-modelo" style="display:none"></div>
+        <div style="height:1rem"></div>
+        <div class="subsection-title">Métricas de Mercado</div>
+        <table class="tbl-simple" id="res-mercado"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 06 — TESIS BULL / BEAR ────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 06</span>
+        <span class="sec-title">Tesis de Inversión</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="bull-bear-grid">
+          <div class="thesis-col bull-col">
+            <div class="thesis-hdr green-txt">🟢 Argumentos Alcistas</div>
+            <ul class="bullets-list" id="res-bull"></ul>
+          </div>
+          <div class="thesis-col bear-col">
+            <div class="thesis-hdr red-txt">🔴 Argumentos Bajistas</div>
+            <ul class="bullets-list" id="res-bear"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEC 06b — MOAT ────────────────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 06b</span>
+        <span class="sec-title">Análisis MOAT — Ventajas Competitivas</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-moat"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 06c — MAPA DE RIESGOS ─────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 06c</span>
+        <span class="sec-title">Mapa de Riesgos</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-riesgos"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 07 — VALORACIÓN DCF + MONTE CARLO ─────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 07</span>
+        <span class="sec-title">Valoración</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="charts-grid-2">
+          <div class="chart-card">
+            <span class="chart-hdr">💰 DCF — 3 Escenarios</span>
+            <div style="position:relative;height:200px"><canvas id="chart-dcf"></canvas></div>
+            <table class="tbl-simple" id="res-dcf-tabla" style="margin-top:.7rem"></table>
+          </div>
+          <div class="chart-card">
+            <span class="chart-hdr">🎲 Monte Carlo</span>
+            <div style="position:relative;height:200px"><canvas id="chart-mc"></canvas></div>
+            <table class="tbl-simple" id="res-mc-tabla" style="margin-top:.7rem"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEC 08 — PEERS ─────────────────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08</span>
+        <span class="sec-title">Comparables del Sector</span>
+      </div>
+      <div class="report-sec-body">
+        <div style="position:relative;height:200px;margin-bottom:1rem"><canvas id="chart-peers"></canvas></div>
+        <table class="tbl-simple" id="res-peers"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 08b — KPIs SECTORIALES ────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08b</span>
+        <span class="sec-title">KPIs Sectoriales — Métricas Operativas Clave</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-kpis"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 08c — GEOGRAFÍA ────────────────────────────────────── -->
+    <div class="report-section" id="sec-geografia" style="display:none">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08c</span>
+        <span class="sec-title">Revenue por Geografía</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-geografia"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 08d — CAPITAL ALLOCATION & OWNERSHIP ───────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08d</span>
+        <span class="sec-title">Capital Allocation &amp; Ownership</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="subsection-title" style="margin-bottom:.5rem">Capital Allocation — Retorno al Accionista</div>
+        <div style="overflow-x:auto"><table class="tbl-simple" id="res-capalloc"></table></div>
+        <div class="subsection-title" style="margin-top:1rem;margin-bottom:.5rem">Top Accionistas Institucionales</div>
+        <table class="tbl-simple" id="res-ownership"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 08e — GUIDANCE ─────────────────────────────────────── -->
+    <div class="report-section" id="sec-guidance" style="display:none">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08e</span>
+        <span class="sec-title">Guidance Management vs. Consenso Analistas</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-guidance"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 08f — NOTICIAS ────────────────────────────────────── -->
+    <div class="report-section" id="sec-noticias" style="display:none">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08f</span>
+        <span class="sec-title">Noticias y Eventos Recientes (últimos 90 días)</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-noticias"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 08g — INSIDERS FORM 4 ─────────────────────────────── -->
+    <div class="report-section" id="sec-insiders" style="display:none">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 08g</span>
+        <span class="sec-title">Transacciones Insiders — Form 4 (SEC EDGAR)</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-insiders"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 09 — FORENSE CONTABLE ─────────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 09</span>
+        <span class="sec-title">Forense Contable</span>
+      </div>
+      <div class="report-sec-body">
+        <p id="res-forense-intro" style="font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:.8rem;line-height:1.6"></p>
+        <table class="tbl-simple" id="res-forense"></table>
+        <p id="res-forense-semaforo" style="font-size:.82rem;margin-top:.8rem;padding:.6rem .8rem;background:rgba(255,255,255,.03);border-radius:6px"></p>
+      </div>
+    </div>
+
+    <!-- ── SEC 10 — ESCENARIOS EARNINGS ──────────────────────────── -->
+    <div class="report-section">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 10</span>
+        <span class="sec-title">Escenarios Earnings</span>
+      </div>
+      <div class="report-sec-body">
+        <table class="tbl-simple" id="res-earnings"></table>
+      </div>
+    </div>
+
+    <!-- ── SEC 11 — CONCLUSIÓN ────────────────────────────────────── -->
+    <div class="report-section" style="border-color:rgba(201,168,76,.2)">
+      <div class="report-sec-hdr" style="border-color:rgba(201,168,76,.15)">
+        <span class="sec-tag" style="color:var(--gold);background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3)">SEC 11</span>
+        <span class="sec-title">Conclusión &amp; Recomendación Final</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="conclusion-box" id="res-conclusion"></div>
+      </div>
+    </div>
+
+    <!-- ── SEC 12 — FUENTES ───────────────────────────────────────── -->
+    <div class="report-section" style="margin-bottom:1rem">
+      <div class="report-sec-hdr">
+        <span class="sec-tag">SEC 12</span>
+        <span class="sec-title">Fuentes &amp; Referencias</span>
+      </div>
+      <div class="report-sec-body">
+        <div class="fuentes-list" id="res-fuentes"></div>
+        <div class="disclaimer-box" style="margin-top:.8rem">
+          Este documento es de carácter informativo y no constituye asesoramiento de inversión personalizado. Las opiniones y estimaciones representan el juicio analítico a la fecha de publicación. Invertir en valores implica riesgos. © Círculo Azul Finanzas — circuloazulfinanzas.com
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let _jobId    = null;
+let _pdfPath  = null;
+let _datos    = null;
+let _empresa  = '';
+
+// ── Drag & drop archivo ───────────────────────────────────────────────────
+(function() {
+  const zone  = document.getElementById('drop-zone');
+  const input = document.getElementById('file-input');
+  const tag   = document.getElementById('file-tag');
+  let _file   = null;
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'rgba(201,168,76,.5)'; });
+  zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.style.borderColor = '';
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', e => { if (e.target.files[0]) setFile(e.target.files[0]); });
+
+  function setFile(f) {
+    _file = f;
+    tag.textContent = '📎 ' + f.name + ' (' + (f.size/1024).toFixed(1) + ' KB)';
+    tag.style.display = 'block';
+  }
+  window._getFile = () => _file;
+})();
+
+// ── Pantallas ─────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.getElementById('screen-input').style.display    = name === 'input'    ? 'block' : 'none';
+  document.getElementById('screen-progress').style.display = name === 'progress' ? 'block' : 'none';
+  document.getElementById('screen-result').style.display   = name === 'result'   ? 'block' : 'none';
+}
+
+function volverInput() {
+  _jobId = null; _pdfPath = null; _datos = null;
+  document.getElementById('btn-generar').disabled = false;
+  document.getElementById('error-box').style.display = 'none';
+  showScreen('input');
+}
+
+// ── Progreso UI ───────────────────────────────────────────────────────────
+function setStep(n, state) {
+  // state: 'active' | 'done' | 'waiting'
+  const el = document.getElementById('step-' + n);
+  const ss = document.getElementById('ss-' + n);
+  el.className = 'step-item ' + state;
+  if (state === 'active') ss.innerHTML = '<div class="step-spinner"></div>';
+  else if (state === 'done') ss.innerHTML = '<span style="color:var(--green);font-size:1.1rem">✓</span>';
+  else ss.innerHTML = '';
+}
+
+function setProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-pct').textContent = Math.round(pct) + '%';
+}
+
+function showProgressError(msg) {
+  document.getElementById('error-detail').textContent = msg;
+  document.getElementById('progress-error').style.display = 'block';
+  setProgress(0);
+}
+
+// ── Iniciar análisis ──────────────────────────────────────────────────────
+async function iniciarAnalisis() {
+  const empresa = document.getElementById('inp-empresa').value.trim();
+  const eb = document.getElementById('error-box');
+  if (!empresa) {
+    eb.textContent = 'Ingresá el nombre o ticker de la empresa.';
+    eb.style.display = 'block';
+    return;
+  }
+  _empresa = empresa;
+  document.getElementById('btn-generar').disabled = true;
+  document.getElementById('error-box').style.display = 'none';
+
+  // Leer archivo si hay
+  let archivoBase64 = null;
+  let archivoNombre = null;
+  const file = window._getFile ? window._getFile() : null;
+  if (file) {
+    archivoBase64 = await fileToBase64(file);
+    archivoNombre = file.name;
+  }
+
+  // Pasar a pantalla de progreso
+  document.getElementById('prog-empresa').textContent = empresa;
+  document.getElementById('progress-error').style.display = 'none';
+  setStep(1, 'waiting'); setStep(2, 'waiting'); setStep(3, 'waiting');
+  setProgress(0);
+  showScreen('progress');
+
+  try {
+    // Paso 1 activo
+    setStep(1, 'active');
+    setProgress(5);
+
+    const resp = await fetch('/api/analisis/generar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ empresa, archivo: archivoBase64, archivoNombre }),
+      signal: AbortSignal.timeout(180000)
+    });
+
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || 'Error en el servidor');
+
+    _jobId   = data.jobId;
+    _pdfPath = data.pdfUrl;
+    _datos   = data.resumen;
+
+    // Simular progreso visual en base al status recibido
+    setStep(1, 'done'); setProgress(33);
+    setStep(2, 'done'); setProgress(66);
+    setStep(3, 'done'); setProgress(100);
+
+    await delay(500);
+    mostrarResultado(data);
+
+  } catch (err) {
+    setStep(1, 'waiting'); setStep(2, 'waiting'); setStep(3, 'waiting');
+    showProgressError(err.name === 'TimeoutError'
+      ? 'La solicitud tardó demasiado. El servidor puede estar generando el PDF. Intentá de nuevo.'
+      : (err.message || String(err)));
+  }
+}
+
+// ── Mostrar resultado ─────────────────────────────────────────────────────
+function mkChart(id, config) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return null;
+  if (canvas._chartInst) { try { canvas._chartInst.destroy(); } catch(e){} }
+  const c = new Chart(canvas, config);
+  canvas._chartInst = c;
+  return c;
+}
+
+// Convierte array de decimales (0-1) a porcentajes si detecta que están en rango 0-1
+function toPct(arr) {
+  if (!arr || !arr.length) return [];
+  const filt = arr.filter(v => v && v !== 0);
+  if (filt.length && Math.max(...filt) <= 1.5) return arr.map(v => +(v * 100).toFixed(2));
+  return arr.map(v => +v || 0);
+}
+
+// Limpia valores numéricos con comas/$ etc
+function cleanNum(v) { return +(String(v).replace(/[$,% ]/g,'')) || 0; }
+
+function mostrarResultado(data) {
+  const d = data.resumen || {};
+  showScreen('result');
+
+  // Chart.js dark theme defaults
+  Chart.defaults.color        = 'rgba(255,255,255,.45)';
+  Chart.defaults.borderColor  = 'rgba(255,255,255,.06)';
+  Chart.defaults.font.family  = "'Inter', sans-serif";
+  Chart.defaults.font.size    = 11;
+
+  const SX = { grid: { color: 'rgba(255,255,255,.04)' } };
+  const SY = { grid: { color: 'rgba(255,255,255,.04)' } };
+  const SYmoney = { ...SY, ticks: { callback: v => '$'+v } };
+  const SYpct   = { ...SY, ticks: { callback: v => v+'%' } };
+  const LEG = { labels: { boxWidth: 12, padding: 16 } };
+
+  // ── Header
+  const empresa = d.empresa_nombre || _empresa;
+  const ticker  = d.empresa_ticker || '';
+  document.getElementById('res-empresa').textContent = empresa;
+  const tickerLine = document.getElementById('res-ticker-line');
+  if (tickerLine) tickerLine.textContent = ticker ? ticker + (d.empresa_sector ? '  ·  ' + d.empresa_sector : '') : '';
+  document.getElementById('res-fecha').textContent = d.fecha_analisis || new Date().toLocaleDateString('es-AR');
+  const secEl = document.getElementById('res-sector');
+  if (secEl) secEl.textContent = d.empresa_sector || '—';
+
+  // ── Hero rec
+  const rec = ((d.recomendacion || 'HOLD').split(' ')[0]).toUpperCase();
+  const recEl = document.getElementById('res-rec');
+  recEl.textContent = d.recomendacion || 'HOLD';
+  const recClasses = ['BUY','HOLD','ACUMULAR','SELL','VENDER'];
+  recEl.className = 'rec-badge ' + (recClasses.includes(rec) ? rec : 'HOLD');
+  document.getElementById('res-precio').textContent    = d.precio_cierre ? '$' + d.precio_cierre : '—';
+  document.getElementById('res-target-lo').textContent = d.target_bajo   ? '$' + d.target_bajo   : '—';
+  document.getElementById('res-target-hi').textContent = d.target_alto   ? '$' + d.target_alto   : '—';
+  document.getElementById('res-horizonte').textContent = d.horizonte || '12 meses';
+  document.getElementById('res-confianza').textContent = d.confianza || '—';
+  const upEl = document.getElementById('res-upside');
+  if (d.precio_cierre && d.target_alto) {
+    const up = (((Number(d.target_alto) - Number(d.precio_cierre)) / Number(d.precio_cierre)) * 100).toFixed(1);
+    upEl.textContent = (up > 0 ? '▲ +' : '▼ ') + up + '% upside potencial';
+    upEl.style.color = up > 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // ── Perfil de empresa
+  const perfilEl = document.getElementById('res-perfil');
+  if (perfilEl) {
+    const perfData = [
+      ['Empresa', d.empresa_nombre], ['Ticker', d.empresa_ticker],
+      ['Sector', d.empresa_sector],  ['CEO', d.empresa_ceo],
+      ['CFO', d.empresa_cfo],        ['Empleados', d.empresa_empleados],
+      ['IPO', d.empresa_ipo],        ['Sede', d.empresa_sede],
+      ['Auditora', d.empresa_auditora], ['Market Cap', d.market_cap],
+    ].filter(([,v]) => v);
+    perfilEl.innerHTML = perfData.map(([l,v]) =>
+      `<div class="profile-item"><label>${l}</label><span>${v}</span></div>`).join('');
+  }
+  const modeloEl = document.getElementById('res-modelo');
+  if (modeloEl && d.empresa_modelo) { modeloEl.textContent = d.empresa_modelo; modeloEl.style.display = 'block'; }
+
+  // ── Resumen ejecutivo bullets
+  const bullsEl = document.getElementById('res-bullets');
+  bullsEl.innerHTML = '';
+  (d.resumen_ejecutivo || []).forEach(row => {
+    const bg = (row[0]||'').toLowerCase();
+    const titulo = row[3]||'', texto = row[4]||'';
+    const cls = bg.includes('grn') ? 'green' : bg.includes('red') ? 'red' : 'amber';
+    const dot = cls==='green' ? '🟢' : cls==='red' ? '🔴' : '🟡';
+    const li = document.createElement('li');
+    li.className = 'bullet-item ' + cls;
+    li.innerHTML = `<span class="bullet-dot">${dot}</span><div class="bullet-inner"><strong>${titulo}</strong> ${texto}</div>`;
+    bullsEl.appendChild(li);
+  });
+
+  // ── CHART: Revenue & Net Income (bar + line combo)
+  {
+    const years = d.g_years || [];
+    const rev   = (d.g_rev ||[]).map(v => Number(String(v).replace(/,/g,''))||0);
+    const ni    = (d.g_ni  ||[]).map(v => Number(String(v).replace(/,/g,''))||0);
+    mkChart('chart-revenue', {
+      type: 'bar',
+      data: {
+        labels: years,
+        datasets: [
+          { label:'Revenue (M)', data:rev, backgroundColor:'rgba(90,155,255,.22)', borderColor:'rgba(90,155,255,.7)', borderWidth:1, borderRadius:4, yAxisID:'y' },
+          { label:'Net Income (M)', data:ni, type:'line', borderColor:'#C9A84C', backgroundColor:'rgba(201,168,76,.08)', borderWidth:2, pointBackgroundColor:'#C9A84C', pointRadius:4, tension:.35, fill:false, yAxisID:'y2' }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:LEG },
+        scales:{
+          x: SX,
+          y:  { ...SY, ticks:{ callback: v => v>=1000?(v/1000).toFixed(0)+'K':v } },
+          y2: { position:'right', grid:{display:false}, ticks:{ callback: v => v>=1000?(v/1000).toFixed(0)+'K':v } }
+        }
+      }
+    });
+  }
+
+  // ── CHART: Income Mix Donut
+  {
+    const lbl = d.g_mix_lbl || [];
+    const pct = (d.g_mix_pct||[]).map(v => Number(v)||0);
+    const pal = ['#5A9BFF','#C9A84C','#4ade80','#f87171','#fbbf24','#818cf8','#34d399','#fb923c'];
+    mkChart('chart-mix', {
+      type: 'doughnut',
+      data: {
+        labels: lbl,
+        datasets: [{ data:pct, backgroundColor:pal.slice(0,lbl.length).map(c=>c+'99'), borderColor:pal.slice(0,lbl.length), borderWidth:2, hoverOffset:8 }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'62%',
+        plugins:{ legend:{ position:'right', labels:{boxWidth:12,padding:10} }, tooltip:{ callbacks:{ label: ctx => ctx.label+': '+ctx.parsed+'%' } } }
+      }
+    });
+  }
+
+  // ── CHART: Margins (quarterly or annual)
+  {
+    const rawGross  = (d.g_gross_m  ||[]).map(v => +v||0);
+    const rawEbitda = (d.g_ebitda_m ||[]).map(v => +v||0);
+    const rawFcf    = (d.g_fcf_m    ||[]).map(v => +v||0);
+    const allZero   = rawGross.every(v=>v===0) && rawEbitda.every(v=>v===0);
+
+    let qLbls, gross, ebitda, fcf;
+    if (allZero && Array.isArray(d.pnl) && d.pnl.length > 1) {
+      // Fallback: extraer márgenes de la tabla pnl anual
+      const hdrs  = d.pnl[0] || [];
+      const years = hdrs.slice(1);
+      qLbls = years;
+      const findRow = k => (d.pnl.slice(1).find(r => r[0] && r[0].toLowerCase().includes(k)) || []).slice(1).map(v => cleanNum(v));
+      gross  = findRow('gross margin');
+      ebitda = findRow('ebitda margin');
+      fcf    = findRow('fcf margin');
+      // si vienen como decimales (0.45) convertir a %
+      gross  = toPct(gross.length ? gross : []);
+      ebitda = toPct(ebitda.length ? ebitda : []);
+      fcf    = toPct(fcf.length ? fcf : []);
+    } else {
+      qLbls  = d.g_qtrs || rawGross.map((_,i) => 'P'+(i+1));
+      gross  = toPct(rawGross);
+      ebitda = toPct(rawEbitda);
+      fcf    = toPct(rawFcf);
+    }
+    const datasets_m = [];
+    if (gross.some(v=>v!==0))  datasets_m.push({ label:'Gross Margin',  data:gross,  borderColor:'#4ade80', backgroundColor:'rgba(74,222,128,.07)',  borderWidth:2, tension:.3, fill:true, pointRadius:3 });
+    if (ebitda.some(v=>v!==0)) datasets_m.push({ label:'EBITDA Margin', data:ebitda, borderColor:'#5A9BFF', backgroundColor:'rgba(90,155,255,.07)',  borderWidth:2, tension:.3, fill:true, pointRadius:3 });
+    if (fcf.some(v=>v!==0))    datasets_m.push({ label:'FCF Margin',    data:fcf,    borderColor:'#C9A84C', backgroundColor:'rgba(201,168,76,.07)', borderWidth:2, tension:.3, fill:true, pointRadius:3 });
+    if (!datasets_m.length) datasets_m.push({ label:'Sin datos', data:[0], borderColor:'rgba(255,255,255,.1)' });
+    mkChart('chart-margins', {
+      type: 'line',
+      data: { labels: qLbls, datasets: datasets_m },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:LEG}, scales:{ x:SX, y:{ ...SYpct, min:0 } } }
+    });
+  }
+
+  // ── Scorecard grid
+  const scEl = document.getElementById('res-scorecard');
+  scEl.innerHTML = '';
+  [...(d.scorecard_izq||[]), ...(d.scorecard_der||[])].forEach(([label,val]) => {
+    const div = document.createElement('div');
+    div.className = 'sc-item';
+    div.innerHTML = `<span class="sc-label">${label}</span><span class="sc-val">${val}</span>`;
+    scEl.appendChild(div);
+  });
+
+  // ── CHART: DCF 3 escenarios
+  {
+    const dcfLo = (d.g_dcf_lo||[]).map(v => Number(v)||0);
+    const dcfHi = (d.g_dcf_hi||[]).map(v => Number(v)||0);
+    const precio = Number(d.g_precio)||0;
+    const mids = dcfLo.map((lo,i) => ((lo + (dcfHi[i]||lo)) / 2));
+    const dcfDs = [
+      { label:'Valor DCF', data:mids,
+        backgroundColor:['rgba(248,113,113,.3)','rgba(90,155,255,.3)','rgba(74,222,128,.3)'],
+        borderColor:['rgba(248,113,113,.8)','rgba(90,155,255,.8)','rgba(74,222,128,.8)'],
+        borderWidth:2, borderRadius:6 }
+    ];
+    if (precio) dcfDs.push({ label:'Precio actual', data:[precio,precio,precio], type:'line', borderColor:'rgba(201,168,76,.9)', borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false });
+    mkChart('chart-dcf', {
+      type: 'bar',
+      data: { labels:['Pesimista','Base','Optimista'], datasets:dcfDs },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:LEG}, scales:{ x:SX, y:SYmoney } }
+    });
+  }
+
+  // DCF tabla
+  const dcfTb = document.getElementById('res-dcf-tabla');
+  if (dcfTb && Array.isArray(d.dcf_tabla) && d.dcf_tabla.length) {
+    const [hdr,...rows] = d.dcf_tabla;
+    dcfTb.innerHTML = `<thead><tr>${(hdr||[]).map(h=>`<th>${h}</th>`).join('')}</tr></thead>`;
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr=document.createElement('tr'); tr.innerHTML=r.map(c=>`<td>${c}</td>`).join(''); tb.appendChild(tr); });
+    dcfTb.appendChild(tb);
+  }
+
+  // ── CHART: Monte Carlo distribution
+  {
+    const mc = d.montecarlo || [];
+    const mcLabels = mc.map(r => r[0]);
+    const mcPrices = mc.map(r => Number((r[2]||'0').replace(/[$,]/g,''))||0);
+    mkChart('chart-mc', {
+      type: 'bar',
+      data: {
+        labels: mcLabels,
+        datasets: [{ label:'Precio objetivo', data:mcPrices,
+          backgroundColor:['rgba(248,113,113,.4)','rgba(251,191,36,.35)','rgba(90,155,255,.4)','rgba(74,222,128,.35)','rgba(74,222,128,.55)'],
+          borderColor:    ['rgba(248,113,113,.8)','rgba(251,191,36,.8)', 'rgba(90,155,255,.8)', 'rgba(74,222,128,.8)', 'rgba(74,222,128,.9)'],
+          borderWidth:2, borderRadius:6
+        }]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:SX, y:SYmoney } }
+    });
+  }
+
+  // Monte Carlo tabla
+  const mcTb = document.getElementById('res-mc-tabla');
+  if (mcTb) {
+    mcTb.innerHTML = '<thead><tr><th>Percentil</th><th>Escenario</th><th>Precio</th><th>Prob.</th></tr></thead>';
+    const tb = document.createElement('tbody');
+    (d.montecarlo||[]).forEach(([p,esc,pr,prob]) => { const tr=document.createElement('tr'); tr.innerHTML=`<td>${p}</td><td>${esc}</td><td>${pr}</td><td>${prob}</td>`; tb.appendChild(tr); });
+    mcTb.appendChild(tb);
+  }
+
+  // ── CHART: Peers grouped bars
+  {
+    const co  = d.g_peers_co  || [];
+    const ps  = (d.g_peers_ps  ||[]).map(v => +v||0);
+    const eve = (d.g_peers_eve ||[]).map(v => +v||0);
+    const gr  = toPct(d.g_peers_gr  ||[]);
+    mkChart('chart-peers', {
+      type: 'bar',
+      data: {
+        labels: co,
+        datasets: [
+          { label:'P/S',       data:ps,  backgroundColor:'rgba(90,155,255,.4)',  borderColor:'rgba(90,155,255,.8)',  borderWidth:1, borderRadius:4 },
+          { label:'EV/EBITDA', data:eve, backgroundColor:'rgba(201,168,76,.4)', borderColor:'rgba(201,168,76,.8)', borderWidth:1, borderRadius:4 },
+          { label:'Rev Gr %',  data:gr,  backgroundColor:'rgba(74,222,128,.35)', borderColor:'rgba(74,222,128,.8)',  borderWidth:1, borderRadius:4 }
+        ]
+      },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:LEG}, scales:{ x:SX, y:SY } }
+    });
+  }
+
+  // Peers tabla
+  const peersEl = document.getElementById('res-peers');
+  peersEl.innerHTML = '<thead><tr><th>Empresa</th><th>Ticker</th><th>P/S</th><th>EV/EBITDA</th><th>Rev Growth</th><th>Rating</th></tr></thead>';
+  const tbP = document.createElement('tbody');
+  (d.comparables||[]).forEach(r => { const tr=document.createElement('tr'); tr.innerHTML=r.map(c=>`<td>${c}</td>`).join(''); tbP.appendChild(tr); });
+  peersEl.appendChild(tbP);
+
+  // ── Bull / Bear
+  const bullEl = document.getElementById('res-bull');
+  bullEl.innerHTML = '';
+  (d.bull_items||[]).forEach(([titulo,texto]) => {
+    const li=document.createElement('li'); li.className='bullet-item green';
+    li.innerHTML=`<span class="bullet-dot">🟢</span><div class="bullet-inner"><strong>${titulo}</strong> ${texto}</div>`;
+    bullEl.appendChild(li);
+  });
+  const bearEl = document.getElementById('res-bear');
+  bearEl.innerHTML = '';
+  (d.bear_items||[]).forEach(([titulo,texto]) => {
+    const li=document.createElement('li'); li.className='bullet-item red';
+    li.innerHTML=`<span class="bullet-dot">🔴</span><div class="bullet-inner"><strong>${titulo}</strong> ${texto}</div>`;
+    bearEl.appendChild(li);
+  });
+
+  // ── P&L tabla
+  const pnlEl = document.getElementById('res-pnl');
+  if (pnlEl && Array.isArray(d.pnl) && d.pnl.length) {
+    const [hdr,...rows] = d.pnl;
+    pnlEl.innerHTML = `<thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead>`;
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr=document.createElement('tr'); tr.innerHTML=r.map((c,i)=>`<td${i>0?' style="font-family:Space Mono,monospace;font-size:.76rem"':''}>${c}</td>`).join(''); tb.appendChild(tr); });
+    pnlEl.appendChild(tb);
+  }
+
+  // ── Métricas de mercado
+  const mercEl = document.getElementById('res-mercado');
+  mercEl.innerHTML = '<thead><tr><th>Métrica</th><th>Valor</th><th>Fuente</th></tr></thead>';
+  const tbM = document.createElement('tbody');
+  (d.metricas_mercado||[]).forEach(([m,v,f]) => { const tr=document.createElement('tr'); tr.innerHTML=`<td>${m}</td><td style="font-family:Space Mono,monospace">${v}</td><td style="color:rgba(255,255,255,.3);font-size:.7rem">${f||''}</td>`; tbM.appendChild(tr); });
+  mercEl.appendChild(tbM);
+
+  // ── Fuentes de ingresos tabla
+  const ingEl = document.getElementById('res-ingresos-tabla');
+  ingEl.innerHTML = '<thead><tr><th>Segmento</th><th>Descripción</th><th>% Revenue</th></tr></thead>';
+  const tbI = document.createElement('tbody');
+  (d.fuentes_ingresos||[]).forEach(([nom,desc,pct]) => { const tr=document.createElement('tr'); tr.innerHTML=`<td>${nom}</td><td style="color:rgba(255,255,255,.55)">${desc}</td><td style="font-family:Space Mono,monospace;color:var(--gold)">${pct}</td>`; tbI.appendChild(tr); });
+  ingEl.appendChild(tbI);
+
+  // ── Forense contable
+  const foIntEl = document.getElementById('res-forense-intro');
+  if (foIntEl) foIntEl.textContent = d.forense_intro || '';
+  const forEl = document.getElementById('res-forense');
+  forEl.innerHTML = '<thead><tr><th>Indicador</th><th>Evaluación</th><th>Estado</th></tr></thead>';
+  const tbFor = document.createElement('tbody');
+  (d.forense_tabla||[]).forEach(([ind,ev,st]) => {
+    const tr = document.createElement('tr');
+    const stColor = st&&st.includes('✅') ? 'var(--green)' : st&&st.includes('🚨') ? 'var(--red)' : 'var(--amber)';
+    tr.innerHTML = `<td>${ind}</td><td style="color:rgba(255,255,255,.55);font-size:.75rem">${ev}</td><td style="color:${stColor};font-size:.75rem;white-space:nowrap">${st}</td>`;
+    tbFor.appendChild(tr);
+  });
+  forEl.appendChild(tbFor);
+  const foSemEl = document.getElementById('res-forense-semaforo');
+  if (foSemEl) foSemEl.textContent = d.forense_semaforo || '';
+
+  // ── Escenarios earnings
+  const earEl = document.getElementById('res-earnings');
+  earEl.innerHTML = '<thead><tr><th>Escenario</th><th>Condición</th><th>Impacto precio</th><th>Acción</th></tr></thead>';
+  const tbEar = document.createElement('tbody');
+  (d.escenarios_earnings||[]).forEach(([esc,cond,imp,acc]) => {
+    const tr = document.createElement('tr');
+    const clr = /bull/i.test(esc) ? 'var(--green)' : /miss/i.test(esc) ? 'var(--red)' : 'var(--amber)';
+    tr.innerHTML = `<td style="color:${clr};font-weight:700">${esc}</td><td>${cond}</td><td style="font-family:Space Mono,monospace">${imp}</td><td>${acc}</td>`;
+    tbEar.appendChild(tr);
+  });
+  earEl.appendChild(tbEar);
+
+  // ── Balance Sheet
+  const bsEl = document.getElementById('res-balance');
+  if (bsEl && Array.isArray(d.balance_sheet) && d.balance_sheet.length > 1) {
+    const [hdr,...rows] = d.balance_sheet;
+    bsEl.innerHTML = `<thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead>`;
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr=document.createElement('tr'); tr.innerHTML=r.map((c,i)=>`<td${i>0?' style="font-family:Space Mono,monospace;font-size:.76rem"':''}>${c}</td>`).join(''); tb.appendChild(tr); });
+    bsEl.appendChild(tb);
+  }
+
+  // ── Cash Flow
+  const cfEl = document.getElementById('res-cashflow');
+  if (cfEl && Array.isArray(d.cashflow) && d.cashflow.length > 1) {
+    const [hdr,...rows] = d.cashflow;
+    cfEl.innerHTML = `<thead><tr>${hdr.map(h=>`<th>${h}</th>`).join('')}</tr></thead>`;
+    const tb = document.createElement('tbody');
+    rows.forEach(r => { const tr=document.createElement('tr'); tr.innerHTML=r.map((c,i)=>`<td${i>0?' style="font-family:Space Mono,monospace;font-size:.76rem"':''}>${c}</td>`).join(''); tb.appendChild(tr); });
+    cfEl.appendChild(tb);
+  }
+
+  // ── Quarterly revenue chart
+  {
+    const qRev = (d.g_qtrs_rev||[]).map(v=>+v||0);
+    const qNi  = (d.g_qtrs_ni||[]).map(v=>+v||0);
+    const qGr  = (d.g_qtrs_growth||[]).map(v=>+v||0);
+    const qL   = d.g_qtrs || qRev.map((_,i)=>'Q'+(i+1));
+    if (qRev.some(v=>v)) {
+      mkChart('chart-qtrs', {
+        type: 'bar',
+        data: { labels: qL, datasets: [
+          { label:'Revenue (M)', data:qRev, backgroundColor:'rgba(90,155,255,.25)', borderColor:'rgba(90,155,255,.8)', borderWidth:1, borderRadius:4, yAxisID:'y' },
+          { label:'Net Income (M)', data:qNi, type:'line', borderColor:'#C9A84C', backgroundColor:'rgba(201,168,76,.06)', borderWidth:2, pointRadius:4, tension:.35, fill:false, yAxisID:'y2' },
+          { label:'Rev Growth %', data:qGr, type:'line', borderColor:'rgba(74,222,128,.7)', backgroundColor:'rgba(74,222,128,.04)', borderWidth:1.5, borderDash:[4,3], pointRadius:3, tension:.3, fill:false, yAxisID:'y3' }
+        ]},
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:LEG},
+          scales:{ x:SX,
+            y:{ ...SY, position:'left', ticks:{ callback: v => v>=1000?(v/1000).toFixed(0)+'K':v } },
+            y2:{ position:'right', grid:{display:false}, ticks:{ callback: v => v>=1000?(v/1000).toFixed(0)+'K':v } },
+            y3:{ position:'right', grid:{display:false}, display:false }
+          }
+        }
+      });
+    }
+  }
+
+  // ── KPIs Sectoriales
+  const kpisEl = document.getElementById('res-kpis');
+  if (kpisEl && (d.kpis_sector||[]).length) {
+    kpisEl.innerHTML = '<thead><tr><th>KPI Sectorial</th><th>Valor</th><th>YoY</th><th>Descripción</th></tr></thead>';
+    const tbKpis = document.createElement('tbody');
+    (d.kpis_sector||[]).forEach(([kpi,val,yoy,desc]) => {
+      const tr = document.createElement('tr');
+      const yoyColor = String(yoy||'').startsWith('+') ? 'var(--green)' : 'var(--red)';
+      tr.innerHTML = `<td>${kpi}</td><td style="font-family:Space Mono,monospace;color:var(--blue)">${val}</td><td style="color:${yoyColor};font-family:Space Mono,monospace">${yoy}</td><td style="color:rgba(255,255,255,.55);font-size:.75rem">${desc}</td>`;
+      tbKpis.appendChild(tr);
+    });
+    kpisEl.appendChild(tbKpis);
+  }
+
+  // ── Geografía
+  const geoEl = document.getElementById('res-geografia');
+  const geoSec = document.getElementById('sec-geografia');
+  if (geoEl && (d.geografia||[]).length) {
+    geoEl.innerHTML = '<thead><tr><th>Región</th><th>Revenue (M)</th><th>Crecimiento</th><th>% del Total</th></tr></thead>';
+    const tbGeo = document.createElement('tbody');
+    (d.geografia||[]).forEach(([reg,rev,gr,pct]) => {
+      const tr = document.createElement('tr');
+      const grColor = String(gr||'').startsWith('+') ? 'var(--green)' : 'var(--red)';
+      tr.innerHTML = `<td>${reg}</td><td style="font-family:Space Mono,monospace;color:var(--blue)">$${rev}M</td><td style="color:${grColor};font-family:Space Mono,monospace">${gr}</td><td style="font-family:Space Mono,monospace">${pct}</td>`;
+      tbGeo.appendChild(tr);
+    });
+    geoEl.appendChild(tbGeo);
+    if (geoSec) geoSec.style.display = 'block';
+  }
+
+  // ── Capital Allocation
+  const capAlEl = document.getElementById('res-capalloc');
+  if (capAlEl && (d.capital_alloc||[]).length) {
+    capAlEl.innerHTML = '<thead><tr><th>Año</th><th>Buybacks</th><th>Dividendos</th><th>FCF</th><th>Uso de Capital</th></tr></thead>';
+    const tbCap = document.createElement('tbody');
+    (d.capital_alloc||[]).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = r.map((c,i) => `<td${i>0&&i<4?' style="font-family:Space Mono,monospace;color:var(--blue)"':''}>${c}</td>`).join('');
+      tbCap.appendChild(tr);
+    });
+    capAlEl.appendChild(tbCap);
+  }
+
+  // ── Ownership
+  const ownEl = document.getElementById('res-ownership');
+  if (ownEl && (d.ownership||[]).length) {
+    ownEl.innerHTML = '<thead><tr><th>Accionista</th><th>% Capital</th><th>Acciones</th></tr></thead>';
+    const tbOwn = document.createElement('tbody');
+    (d.ownership||[]).forEach(([ac,pct,acc]) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${ac}</td><td style="font-family:Space Mono,monospace;color:var(--blue)">${pct}</td><td style="color:rgba(255,255,255,.55)">${acc}</td>`;
+      tbOwn.appendChild(tr);
+    });
+    ownEl.appendChild(tbOwn);
+  }
+
+  // ── Guidance
+  const guidEl = document.getElementById('res-guidance');
+  const guidSec = document.getElementById('sec-guidance');
+  if (guidEl && (d.guidance||[]).length) {
+    guidEl.innerHTML = '<thead><tr><th>Métrica</th><th>Guía Management</th><th>Consenso</th><th>vs. Consenso</th></tr></thead>';
+    const tbGuid = document.createElement('tbody');
+    (d.guidance||[]).forEach(([met,guia,cons,vs]) => {
+      const tr = document.createElement('tr');
+      const vsLow = String(vs||'').toLowerCase();
+      const vsColor = vsLow.includes('supera')||vsLow.startsWith('+') ? 'var(--green)' : vsLow.includes('por debajo') ? 'var(--red)' : 'var(--amber)';
+      tr.innerHTML = `<td>${met}</td><td style="font-family:Space Mono,monospace;color:var(--blue)">${guia}</td><td style="font-family:Space Mono,monospace">${cons}</td><td style="color:${vsColor};font-weight:700">${vs}</td>`;
+      tbGuid.appendChild(tr);
+    });
+    guidEl.appendChild(tbGuid);
+    if (guidSec) guidSec.style.display = 'block';
+  }
+
+  // ── MOAT
+  const moatEl = document.getElementById('res-moat');
+  if (moatEl && (d.moat||[]).length) {
+    moatEl.innerHTML = '<thead><tr><th>Factor MOAT</th><th>Descripción</th><th>Score</th></tr></thead>';
+    const tbMoat = document.createElement('tbody');
+    (d.moat||[]).forEach(([f,desc,sc]) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style="color:var(--gold);font-weight:600">${f}</td><td style="color:rgba(255,255,255,.55);font-size:.75rem">${desc}</td><td style="color:var(--amber);font-size:.9rem">${sc}</td>`;
+      tbMoat.appendChild(tr);
+    });
+    moatEl.appendChild(tbMoat);
+  }
+
+  // ── Riesgos
+  const riesEl = document.getElementById('res-riesgos');
+  if (riesEl && (d.riesgos||[]).length) {
+    riesEl.innerHTML = '<thead><tr><th>Riesgo</th><th>Probabilidad</th><th>Impacto</th><th>Mitigación</th></tr></thead>';
+    const tbRies = document.createElement('tbody');
+    (d.riesgos||[]).forEach(([r,prob,imp,mit]) => {
+      const tr = document.createElement('tr');
+      const probClr = /alta/i.test(prob) ? 'var(--red)' : /media/i.test(prob) ? 'var(--amber)' : 'var(--green)';
+      const impClr  = /alto/i.test(imp)  ? 'var(--red)'  : /medio/i.test(imp)  ? 'var(--amber)'  : 'var(--green)';
+      tr.innerHTML = `<td>${r}</td><td style="color:${probClr};font-weight:700">${prob}</td><td style="color:${impClr};font-weight:700">${imp}</td><td style="color:rgba(255,255,255,.55);font-size:.75rem">${mit}</td>`;
+      tbRies.appendChild(tr);
+    });
+    riesEl.appendChild(tbRies);
+  }
+
+  // ── Noticias
+  const notEl = document.getElementById('res-noticias');
+  const notSec = document.getElementById('sec-noticias');
+  if (notEl && (d.noticias||[]).length) {
+    notEl.innerHTML = '<thead><tr><th>Fecha</th><th>Evento</th><th>Impacto</th><th>Fuente</th></tr></thead>';
+    const tbNot = document.createElement('tbody');
+    (d.noticias||[]).forEach(([fecha,ev,imp,fuente]) => {
+      const tr = document.createElement('tr');
+      const impClr = /positiv|alcist|bull/i.test(imp) ? 'var(--green)' : /negativ|bajist|bear|risk/i.test(imp) ? 'var(--red)' : 'var(--amber)';
+      tr.innerHTML = `<td style="white-space:nowrap;color:rgba(255,255,255,.5);font-size:.75rem">${fecha}</td><td>${ev}</td><td style="color:${impClr};font-size:.75rem">${imp}</td><td style="color:rgba(255,255,255,.3);font-size:.7rem">${fuente}</td>`;
+      tbNot.appendChild(tr);
+    });
+    notEl.appendChild(tbNot);
+    if (notSec) notSec.style.display = 'block';
+  }
+
+  // ── Insiders Form 4
+  const insEl = document.getElementById('res-insiders');
+  const insSec = document.getElementById('sec-insiders');
+  if (insEl && (d.insiders||[]).length) {
+    insEl.innerHTML = '<thead><tr><th>Insider</th><th>Rol</th><th>Acción</th><th>Precio</th><th>Fecha</th><th>Tipo</th></tr></thead>';
+    const tbIns = document.createElement('tbody');
+    (d.insiders||[]).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = r.map(c => `<td>${c}</td>`).join('');
+      tbIns.appendChild(tr);
+    });
+    insEl.appendChild(tbIns);
+    if (insSec) insSec.style.display = 'block';
+  }
+
+  // ── Conclusión
+  const concEl = document.getElementById('res-conclusion');
+  if (concEl) concEl.textContent = d.conclusion_texto || '—';
+
+  // ── Fuentes
+  const fuentesEl = document.getElementById('res-fuentes');
+  if (fuentesEl) {
+    fuentesEl.innerHTML = (d.fuentes||[]).map(f => {
+      const txt = Array.isArray(f) ? [f[0],f[1],f[2]].filter(Boolean).join(' · ') : String(f||'');
+      return `<div>${txt}</div>`;
+    }).join('');
+  }
+}
+
+// ── Descargar PDF ─────────────────────────────────────────────────────────
+async function descargarPDF() {
+  if (!_jobId) return;
+  const btn = document.getElementById('btn-download');
+  btn.textContent = 'Descargando…'; btn.disabled = true;
+  try {
+    const resp = await fetch('/api/analisis/descargar/' + _jobId);
+    if (!resp.ok) throw new Error('No se pudo descargar el PDF');
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const d    = _datos || {};
+    const tick = d.empresa_ticker || _empresa.replace(/\s+/g,'_');
+    a.href     = url;
+    a.download = tick + '_Analisis_CirculoAzul.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Error al descargar: ' + e.message);
+  } finally {
+    btn.textContent = '⬇ Descargar PDF'; btn.disabled = false;
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload  = () => res(reader.result.split(',')[1]);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Enter en el input ─────────────────────────────────────────────────────
+document.getElementById('inp-empresa').addEventListener('keydown', e => {
+  if (e.key === 'Enter') iniciarAnalisis();
+});
+</script>
+</body>
+</html>

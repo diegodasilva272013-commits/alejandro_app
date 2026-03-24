@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Círculo Azul Finanzas — Check List Indicadores</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+<style>
+/* ── Buscador de empresa ── */
+.empresa-search-wrap{position:relative;margin-bottom:16px}
+.empresa-search-label{font-size:10px;font-weight:500;letter-spacing:.25em;text-transform:uppercase;color:#8FA8C8;margin-bottom:8px}
+.empresa-search-box{position:relative;display:flex;align-items:center}
+.empresa-search-icon{position:absolute;left:13px;width:16px;height:16px;color:#6A829E;pointer-events:none;flex-shrink:0}
+.empresa-search-input{width:100%;padding:11px 36px 11px 38px;background:rgba(13,22,39,.8);border:1px solid rgba(46,116,232,.3);border-radius:8px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.empresa-search-input:focus{border-color:#2E74E8;box-shadow:0 0 0 3px rgba(46,116,232,.12)}
+.empresa-search-input::placeholder{color:#4A6080}
+.empresa-search-clear{position:absolute;right:12px;color:#6A829E;cursor:pointer;font-size:13px;padding:4px;transition:color .15s}
+.empresa-search-clear:hover{color:#B8CEEA}
+.empresa-dropdown{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#0D1627;border:1px solid rgba(46,116,232,.35);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:500;overflow:hidden;animation:ddIn .15s ease}
+@keyframes ddIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.empresa-dd-item{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;transition:background .15s;border-bottom:1px solid rgba(46,116,232,.1)}
+.empresa-dd-item:last-child{border-bottom:none}
+.empresa-dd-item:hover{background:rgba(26,86,196,.18)}
+.empresa-dd-ticker{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;color:#5A9BFF;min-width:52px;flex-shrink:0}
+.empresa-dd-info{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.empresa-dd-nombre{font-size:13px;color:#D8E6F5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empresa-dd-exch{font-size:10px;color:#6A829E;letter-spacing:.05em}
+.empresa-dd-empty{padding:16px;text-align:center;color:#6A829E;font-size:13px}
+.empresa-dd-loading{padding:16px;text-align:center;color:#6A829E;font-size:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+.empresa-dd-spin{width:12px;height:12px;border:2px solid rgba(90,155,255,.3);border-top-color:#5A9BFF;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empresa-selected-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(26,86,196,.15);border:1px solid rgba(46,116,232,.35);border-radius:20px;padding:5px 12px;font-size:12px;color:#B8CEEA;margin-top:8px}
+.empresa-selected-badge strong{color:#5A9BFF;font-family:'Space Mono',monospace}
+</style>
+</head>
+<body>
+
+<div class="sidebar"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <a class="topbar-brand" onclick="showLanding()" style="cursor:pointer">
+    <svg class="topbar-logo-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="tbcircle" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stop-color="#5A9BFF"/>
+          <stop offset="100%" stop-color="#0D2870"/>
+        </radialGradient>
+        <radialGradient id="tbglow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(90,155,255,0.35)"/>
+          <stop offset="100%" stop-color="rgba(13,40,112,0)"/>
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="31" fill="url(#tbglow)"/>
+      <circle cx="32" cy="32" r="26" fill="url(#tbcircle)"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1"/>
+      <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+      <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+      <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+      <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+    </svg>
+    <div class="topbar-brand-text">
+      <span class="topbar-brand-name">Círculo Azul</span>
+      <span class="topbar-brand-sub">Finanzas</span>
+    </div>
+  </a>
+  <div class="topbar-actions">
+    <button class="btn btn-outline btn-sm no-print" onclick="showInput()">← Nuevo análisis</button>
+    <button class="btn btn-outline btn-sm no-print" onclick="showTechInput()" style="border-color:rgba(90,155,255,.5);color:#5A9BFF">📈 Técnico</button>
+    <button class="btn btn-outline btn-sm no-print" id="btn-selector" style="display:none" onclick="showInput()">⚙ Editar indicadores</button>
+    <button class="btn btn-outline btn-sm no-print" id="btn-comparar-cl" style="display:none" onclick="openComparePanelCL()">⚖ Comparar</button>
+    <button class="btn btn-outline btn-sm no-print" id="btn-share" style="display:none" onclick="shareAnalisis()">🔗 Compartir</button>
+    <button class="btn btn-outline btn-sm no-print" onclick="openHist()">📋 Historial</button>
+    <button class="btn btn-gold btn-sm no-print" id="btn-save" style="display:none" onclick="saveAnalisis()">💾 Guardar</button>
+    <button class="btn btn-outline btn-sm no-print" id="btn-ver-pdf" style="display:none" onclick="verPDF()">👁 Ver PDF</button>
+    <button class="btn btn-gold btn-sm no-print" id="btn-pdf" style="display:none" onclick="generarPDF()">⬇ Descargar PDF</button>
+    <button class="btn btn-outline btn-sm no-print" id="btn-tech-pdf" style="display:none;border-color:rgba(90,155,255,.5);color:#5A9BFF" onclick="generarTechPDF()">⬇ PDF Técnico</button>
+  </div>
+</div>
+
+<!-- ══════════════ PDF HEADER (referencia para el servidor) ══════════════ -->
+<div id="pdf-header" style="display:none">
+  <div class="pdf-hdr-left">
+    <svg class="pdf-hdr-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="ph-cg" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stop-color="#5A9BFF"/>
+          <stop offset="100%" stop-color="#0D2870"/>
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="30" fill="url(#ph-cg)"/>
+      <ellipse cx="26" cy="22" rx="4" ry="5.5" fill="white" opacity=".95"/>
+      <ellipse cx="33" cy="19" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="39.5" cy="21" rx="3.2" ry="4.5" fill="white" opacity=".85"/>
+      <ellipse cx="44" cy="27" rx="3" ry="4" fill="white" opacity=".75"/>
+      <ellipse cx="32" cy="34" rx="10" ry="9" fill="white" opacity=".95"/>
+      <polyline points="20,50 28,43 34,47 46,34" stroke="#5A9BFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <polygon points="46,34 40,32 44,38" fill="#5A9BFF"/>
+    </svg>
+    <div>
+      <div class="pdf-hdr-brand">CÍRCULO AZUL FINANZAS</div>
+      <div class="pdf-hdr-sub">Análisis Cuantitativo Profesional</div>
+    </div>
+  </div>
+  <div class="pdf-hdr-center">
+    <div class="pdf-hdr-company" id="pdf-company-name">—</div>
+    <div class="pdf-hdr-type">Check List · Indicadores Financieros</div>
+  </div>
+  <div class="pdf-hdr-right">
+    <div class="pdf-hdr-date" id="pdf-report-date">—</div>
+    <div class="pdf-hdr-conf">CONFIDENCIAL</div>
+  </div>
+</div>
+
+<!-- ══════════════ LANDING ══════════════ -->
+<div id="landing" style="margin-top:56px">
+  <div class="land-geo"></div>
+
+  <!-- ── Hero: 2 columnas ── -->
+  <div class="land-hero">
+
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="land-left">
+      <div class="land-logo-hero">
+        <svg class="land-logo-icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="lgcircle" cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#4A8BEF"/>
+              <stop offset="55%" stop-color="#1A56C4"/>
+              <stop offset="100%" stop-color="#09206A"/>
+            </radialGradient>
+            <radialGradient id="lgglow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgba(90,155,255,0.5)"/>
+              <stop offset="100%" stop-color="rgba(13,40,112,0)"/>
+            </radialGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <circle cx="60" cy="60" r="58" fill="url(#lgglow)"/>
+          <circle cx="60" cy="60" r="50" fill="url(#lgcircle)" filter="url(#glow)"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+          <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(90,155,255,0.3)" stroke-width="1"/>
+          <ellipse cx="44" cy="36" rx="7.5" ry="10" fill="white" opacity=".92"/>
+          <ellipse cx="59" cy="30" rx="6.5" ry="8.5" fill="white" opacity=".85"/>
+          <ellipse cx="73" cy="35" rx="6.5" ry="8.5" fill="white" opacity=".85"/>
+          <ellipse cx="84" cy="48" rx="5.5" ry="7.5" fill="white" opacity=".75"/>
+          <ellipse cx="60" cy="63" rx="19" ry="17" fill="white" opacity=".93"/>
+          <rect x="28" y="78" width="10" height="18" rx="2" fill="rgba(90,155,255,0.85)"/>
+          <rect x="41" y="68" width="10" height="28" rx="2" fill="rgba(90,155,255,0.9)"/>
+          <rect x="54" y="58" width="10" height="38" rx="2" fill="rgba(90,155,255,0.95)"/>
+          <polyline points="30,75 45,62 57,69 82,44" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <polygon points="82,44 72,43 79,52" fill="white"/>
+        </svg>
+        <div class="land-logo-wordmark">
+          <span class="land-logo-name">CÍRCULO AZUL</span>
+          <span class="land-logo-tagline">Finanzas · Análisis de Élite</span>
+        </div>
+      </div>
+
+      <div class="land-tag">Check List Indicadores Financieros 2</div>
+      <h1 class="land-title">
+        <span class="l1">ANÁLISIS</span>
+        <span class="l2">Cuantitativo Profesional</span>
+      </h1>
+      <div class="land-div"></div>
+      <p class="land-sub">Ingresá los datos financieros de tu empresa y obtenés un análisis completo de 42 indicadores con señales, márgenes, ratios y dashboard profesional al instante.</p>
+      <div class="land-cta">
+        <button class="btn btn-gold btn-large" onclick="showInput()">Comenzar análisis →</button>
+        <button class="btn btn-outline btn-large" onclick="loadExample()">Ver ejemplo</button>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: preview del dashboard -->
+    <div class="land-right">
+      <div class="land-preview">
+        <!-- barra superior del panel -->
+        <div class="lp-topbar">
+          <span class="lp-brand">● CÍRCULO AZUL FINANZAS</span>
+          <span class="lp-tag">Dashboard Preview</span>
+        </div>
+
+        <!-- contadores de señales -->
+        <div class="lp-scores">
+          <div class="lp-score-item">
+            <span class="lp-score-num" style="color:#4ade80">22</span>
+            <span class="lp-score-lbl">Positivos</span>
+          </div>
+          <div class="lp-score-item">
+            <span class="lp-score-num" style="color:#fbbf24">8</span>
+            <span class="lp-score-lbl">Intermedios</span>
+          </div>
+          <div class="lp-score-item">
+            <span class="lp-score-num" style="color:#f87171">5</span>
+            <span class="lp-score-lbl">Negativos</span>
+          </div>
+          <div class="lp-score-item" style="border-left:1px solid rgba(46,116,232,.15)">
+            <span class="lp-score-num" style="color:#5A9BFF;font-size:22px">35</span>
+            <span class="lp-score-lbl">Indicadores</span>
+          </div>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="lp-cards">
+          <div class="lp-card">
+            <span class="lp-card-val">22%</span>
+            <span class="lp-card-name">ROIC 2025</span>
+            <div class="lp-card-bar"><div class="lp-card-fill" style="width:73%"></div></div>
+            <span class="lp-card-badge g">✓ &gt; 20%</span>
+          </div>
+          <div class="lp-card">
+            <span class="lp-card-val">53.1%</span>
+            <span class="lp-card-name">Margen Bruto</span>
+            <div class="lp-card-bar"><div class="lp-card-fill" style="width:66%"></div></div>
+            <span class="lp-card-badge g">Excelente</span>
+          </div>
+          <div class="lp-card">
+            <span class="lp-card-val">9.8%</span>
+            <span class="lp-card-name">FCF Yield</span>
+            <div class="lp-card-bar"><div class="lp-card-fill" style="width:49%"></div></div>
+            <span class="lp-card-badge g">✓ &gt; 8%</span>
+          </div>
+        </div>
+
+        <!-- mini semáforo de 42 indicadores -->
+        <div class="lp-sem-row">
+          <div class="lp-sem g">01</div><div class="lp-sem g">02</div><div class="lp-sem g">03</div>
+          <div class="lp-sem g">04</div><div class="lp-sem a">05</div><div class="lp-sem g">06</div>
+          <div class="lp-sem g">07</div><div class="lp-sem r">08</div><div class="lp-sem g">09</div>
+          <div class="lp-sem g">10</div><div class="lp-sem a">11</div><div class="lp-sem g">12</div>
+          <div class="lp-sem g">13</div>
+          <div class="lp-sem" style="background:rgba(26,86,196,.1);color:#5A9BFF;border:1px solid rgba(26,86,196,.2);font-size:7px">+22</div>
+        </div>
+
+        <!-- footer del panel -->
+        <div class="lp-foot">
+          <span class="lp-foot-txt">5 años históricos · Series anuales</span>
+          <span class="lp-pdf">⬇ PDF Profesional</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /land-hero -->
+
+  <!-- ── Módulos disponibles (grilla 3 columnas) ── -->
+  <div class="land-modules">
+    <div class="land-modules-title">Módulos disponibles</div>
+    <div class="land-modules-grid">
+
+      <!-- Check List -->
+      <div class="land-module-card" onclick="showInput()" style="cursor:pointer">
+        <div class="lmc-icon">📋</div>
+        <div class="lmc-tag">CHECK LIST</div>
+        <div class="lmc-title">Check List Indicadores</div>
+        <div class="lmc-desc">42 indicadores financieros con señales automáticas, márgenes, ratios, Piotroski, Altman y dashboard visual.</div>
+        <div class="lmc-cta">Abrir módulo →</div>
+      </div>
+
+      <!-- Técnico -->
+      <div class="land-module-card" onclick="showTechInput()" style="cursor:pointer;border-color:rgba(90,155,255,.35);background:rgba(90,155,255,.04)">
+        <div class="lmc-icon">📈</div>
+        <div class="lmc-tag" style="color:#5A9BFF">NUEVO MÓDULO</div>
+        <div class="lmc-title" style="color:#5A9BFF">Análisis Técnico</div>
+        <div class="lmc-desc">Minervini · Kullamagi · Darvas · O'Neill — Breakouts, puntos de entrada, stop loss y objetivos R:R.</div>
+        <div class="lmc-cta" style="color:#5A9BFF">Abrir módulo →</div>
+      </div>
+
+      <!-- ROImp -->
+      <a href="/roimp/" style="text-decoration:none">
+        <div class="land-module-card" style="border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.04)">
+          <div class="lmc-icon">📊</div>
+          <div class="lmc-tag" style="color:#C9A84C">ANÁLISIS ESTRUCTURAL</div>
+          <div class="lmc-title" style="color:#C9A84C">ROImp vs WACC</div>
+          <div class="lmc-desc">Calcula el Rendimiento Implícito, detecta trampas de valoración y verifica la Congruencia de ORO.</div>
+          <div class="lmc-cta" style="color:#C9A84C">Abrir módulo →</div>
+        </div>
+      </a>
+
+      <!-- Acciones 360 -->
+      <a href="/acciones360/" style="text-decoration:none">
+        <div class="land-module-card" style="border-color:rgba(26,167,124,.35);background:rgba(26,167,124,.04)">
+          <div class="lmc-icon">🔭</div>
+          <div class="lmc-tag" style="color:#1AA77C">FUNDAMENTAL 360°</div>
+          <div class="lmc-title" style="color:#1AA77C">Acciones 360</div>
+          <div class="lmc-desc">43 indicadores con semáforo automático — rentabilidad, flujo de caja, deuda, valoración. 9 gráficas + PDF.</div>
+          <div class="lmc-cta" style="color:#1AA77C">Abrir módulo →</div>
+        </div>
+      </a>
+
+      <!-- Señales v3.0 -->
+      <a href="/senales/" style="text-decoration:none">
+        <div class="land-module-card" style="border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.04)">
+          <div class="lmc-icon">🏅</div>
+          <div class="lmc-tag" style="color:#C9A84C">SEÑALES v3.0 — 29 PUNTOS</div>
+          <div class="lmc-title" style="color:#C9A84C">Análisis Financiero v3.0</div>
+          <div class="lmc-desc">Evalúa los 29 puntos A→AC (ROIC/WACC, márgenes, valoración, deuda) con informe completo y conclusión automática.</div>
+          <div class="lmc-cta" style="color:#C9A84C">Abrir módulo →</div>
+        </div>
+      </a>
+
+      <!-- Análisis IA -->
+      <a href="/analisis/" style="text-decoration:none">
+        <div class="land-module-card" style="border-color:rgba(90,155,255,.4);background:rgba(90,155,255,.05)">
+          <div class="lmc-icon">🔬</div>
+          <div class="lmc-tag" style="color:#5A9BFF">ANÁLISIS IA · PDF INSTITUCIONAL</div>
+          <div class="lmc-title" style="color:#5A9BFF">Análisis IA</div>
+          <div class="lmc-desc">Ticker → GPT-4o investiga datos reales → DCF, Monte Carlo, MOAT, forense contable → PDF con 6 gráficos al instante.</div>
+          <div class="lmc-cta" style="color:#5A9BFF">Abrir módulo →</div>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- ── Mega Reporte CTA ── -->
+    <a href="/mega/" style="text-decoration:none;display:block;margin-top:20px">
+      <div class="land-mega-card">
+        <div class="lmega-glow"></div>
+        <div class="lmega-left">
+          <div class="lmega-icon">🔮</div>
+          <div>
+            <div class="lmega-tag">MEGA REPORTE · ANÁLISIS INSTITUCIONAL COMPLETO</div>
+            <div class="lmega-title">Un Ticker. Un Análisis. 20 Páginas.</div>
+            <div class="lmega-desc">GPT-4o analiza la empresa en profundidad: P&amp;L · Balance · Flujo de Caja · MOAT · DCF · Monte Carlo · Forense Contable · Semáforo Integrado de 20 Indicadores · Scoring Final 0–100. Todo en un único PDF institucional.</div>
+          </div>
+        </div>
+        <div class="lmega-right">
+          <div class="lmega-badge">
+            <span class="lmega-badge-num">20</span>
+            <span class="lmega-badge-lbl">páginas</span>
+          </div>
+          <div class="lmega-badge">
+            <span class="lmega-badge-num">95+</span>
+            <span class="lmega-badge-lbl">métricas</span>
+          </div>
+          <div class="lmega-badge">
+            <span class="lmega-badge-num">6</span>
+            <span class="lmega-badge-lbl">gráficos</span>
+          </div>
+          <div class="lmega-cta">Generar Mega Reporte →</div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- ── Cómo funciona (4 pasos simétricos) ── -->
+  <div class="land-how">
+    <div class="how-step">
+      <div class="how-num">01</div>
+      <div class="how-title">Ingresá los datos</div>
+      <div class="how-desc">Pegás los datos financieros en el formato indicado: ingresos, márgenes, deuda, valuación — series de 5 años.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">02</div>
+      <div class="how-title">Cálculo automático</div>
+      <div class="how-desc">El sistema procesa 42 indicadores al instante: señales, márgenes, ratios, Piotroski, Altman y más.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">03</div>
+      <div class="how-title">Dashboard visual</div>
+      <div class="how-desc">Visualizás semáforos, gráficas, KPIs, deuda y alertas en un dashboard interactivo y completo.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">04</div>
+      <div class="how-title">PDF profesional</div>
+      <div class="how-desc">Exportás el informe en PDF con header y footer reales en cada página — listo para presentar al cliente.</div>
+    </div>
+  </div>
+
+</div>
+<!-- ══════════════ INPUT SCREEN ══════════════ -->
+<div id="input-screen" style="margin-top:56px;display:none">
+  <div class="input-header">
+    <h2 class="input-title">Cargá los <span>datos</span></h2>
+    <p class="input-sub">Pegá los datos siguiendo el formato de ejemplo.</p>
+  </div>
+
+  <div class="template-box">
+    <div class="template-label">Formato requerido</div>
+    <div class="template-hint">ACCION: NOMBRE S.A. (TICKER)
+COSTO: 25000
+PROYECCION: 12 meses
+RIESGO: Medio
+MONEDA: USD millones
+
+INGRESOS: 5000, 5400, 5900, 6500, 7200
+UTILIDAD_BRUTA: 2400, 2650, 2950, 3350, 3820
+GANANCIAS_NETAS: 1100, 1250, 1400, 1600, 1850
+EBIT: 1700, 1850, 2050, 2300, 2650
+EBITDA: 2100, 2300, 2550, 2900, 3300
+OFC: 1500, 1650, 1850, 2150, 2450
+CAPEX: 400, 420, 450, 500, 550
+FCF: 1100, 1230, 1400, 1650, 1900
+BPA: 3.00, 3.40, 3.85, 4.40, 5.00
+EQUITY: 8700, 9200, 9600, 10000
+ACTIVOS_TOTALES: 14000
+ACTIVOS_CORRIENTES: 7800
+PASIVOS_CORRIENTES: 3200
+INVENTARIOS: 500
+PP&E: 6000
+DEUDA_TOTAL: 1500
+DEUDA_CP: 300
+CAJA: 5500
+GASTO_INTERESES: 100
+
+EV: 20000
+PER: 18
+PEG: 0.90
+WACC: 9
+ROE: 24
+ROIC: 19, 20, 21, 21.5, 22
+ROA: 16
+
+FCF_SIN_APAL: 2200
+FCF_APAL: 1900
+MARGEN_CAPEX: 7.64
+ALTMAN: 3.4
+PIOTROSKI: 8
+
+ALERTAS: Liquidity management actions amid a Challenging macro environment. No immediate Refinancing required. Cost optimización inititives.</div>
+  </div>
+
+  <!-- ── Buscador de empresa ── -->
+  <div id="ca-search-checklist"></div>
+
+  <textarea class="paste-area" id="paste-area" placeholder="Pegá aquí tus datos financieros..."></textarea>
+  <div class="parse-error" id="parse-error"></div>
+  <div class="parse-ok" id="parse-ok"></div>
+
+  <!-- PANEL SELECTOR -->
+  <div class="ind-panel">
+    <div class="ind-panel-hdr" onclick="toggleIndPanel()">
+      <span class="ind-panel-title">⚙ Personalizar indicadores del reporte</span>
+      <div class="ind-panel-meta">
+        <span class="ind-panel-count"><span id="sel-active-count">43</span> / <span id="sel-total-count">43</span> seleccionados</span>
+        <button class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:10px" onclick="event.stopPropagation();toggleAll(true)">Todos</button>
+        <button class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:10px" onclick="event.stopPropagation();toggleAll(false)">Ninguno</button>
+        <span class="ind-panel-arrow" id="ind-arrow">▼</span>
+      </div>
+    </div>
+    <div class="ind-panel-body" id="ind-panel-body" style="display:none">
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Series de Crecimiento</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g1',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g1',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">01</div><div class="sel-item-name">Ingresos</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="1" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">02</div><div class="sel-item-name">Utilidad Bruta</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="2" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">03</div><div class="sel-item-name">Ganancias Netas</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="3" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">06</div><div class="sel-item-name">FCF — Flujo de Caja Libre</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="6" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">27</div><div class="sel-item-name">EBIT</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="27" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">28</div><div class="sel-item-name">EBITDA</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="28" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">30</div><div class="sel-item-name">CapEx</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g1" value="30" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Márgenes</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g2',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g2',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">04</div><div class="sel-item-name">Margen Bruto</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="4" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">05</div><div class="sel-item-name">Margen Neto</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="5" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">07</div><div class="sel-item-name">Rendimiento FCF</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="7" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">08</div><div class="sel-item-name">Margen FCF 3 años</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="8" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">10</div><div class="sel-item-name">Margen EBIT</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="10" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">25</div><div class="sel-item-name">Margen FCF Sin Apalancamiento</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="25" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">26</div><div class="sel-item-name">Margen FCF Apalancado</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="26" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">29</div><div class="sel-item-name">Margen EBITDA</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="29" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">31</div><div class="sel-item-name">Margen CapEx</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g2" value="31" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Valuación</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g3',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g3',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">09</div><div class="sel-item-name">VE/FCF + FCF Yield</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g3" value="9" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">11</div><div class="sel-item-name">PER</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g3" value="11" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">12</div><div class="sel-item-name">PEG</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g3" value="12" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">18</div><div class="sel-item-name">EV/EBIT + ROImp vs WACC</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g3" value="18" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Rentabilidad</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g4',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g4',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">13</div><div class="sel-item-name">ROE</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g4" value="13" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">14</div><div class="sel-item-name">ROIC</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g4" value="14" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">15</div><div class="sel-item-name">ROA</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g4" value="15" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">17</div><div class="sel-item-name">WACC</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g4" value="17" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Liquidez y Deuda</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g5',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g5',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">19</div><div class="sel-item-name">Liquidez Corriente</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g5" value="19" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">20</div><div class="sel-item-name">Liquidez Ácida</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g5" value="20" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">21</div><div class="sel-item-name">ICR</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g5" value="21" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">22</div><div class="sel-item-name">Deuda / Patrimonio</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g5" value="22" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">23</div><div class="sel-item-name">Deuda Neta / EBITDA</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g5" value="23" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">24</div><div class="sel-item-name">Deuda Neta</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g5" value="24" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Patrimonio y Activos</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g6',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g6',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">16</div><div class="sel-item-name">Equity 4 años</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g6" value="16" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">32</div><div class="sel-item-name">Benef. Bruto / Activos Totales</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g6" value="32" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">33</div><div class="sel-item-name">PP&E / Ingresos</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g6" value="33" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Métricas Avanzadas</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g7',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g7',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">34</div><div class="sel-item-name">Altman Z-Score</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g7" value="34" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">35</div><div class="sel-item-name">Piotroski</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g7" value="35" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">Indicadores Cruzados</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g8',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g8',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">BPA</div><div class="sel-item-name">BPA CAGR</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g8" value="36" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">EBI</div><div class="sel-item-name">Calidad EBITDA</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g8" value="37" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">CCR</div><div class="sel-item-name">Cash Conversion Rate</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g8" value="38" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="sel-group">
+        <div class="sel-group-hdr"><span class="sel-group-title">CF — Calidad de Caja</span><div class="sel-group-ctrl"><button class="sel-toggle-all" onclick="toggleGroup('g9',true)">Todos</button><button class="sel-toggle-all" onclick="toggleGroup('g9',false)">Ninguno</button></div></div>
+        <div class="sel-items">
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">39</div><div class="sel-item-name">CROIC</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g9" value="39" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">40</div><div class="sel-item-name">OFC / Ganancia Neta</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g9" value="40" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">41</div><div class="sel-item-name">FCF / Ganancia Neta</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g9" value="41" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">43</div><div class="sel-item-name">Utilidad Neta / FCF</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g9" value="43" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+          <div class="sel-item"><div class="sel-item-info"><div class="sel-item-num">42</div><div class="sel-item-name">Accrual Ratio</div></div><label class="toggle"><input type="checkbox" class="ind-chk" data-grp="g9" value="42" checked onchange="updateGlobalCount()"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+
+      <!-- GRUPO: INDICADORES PERSONALIZADOS -->
+      <div class="sel-group" id="custom-inds-group">
+        <div class="sel-group-hdr">
+          <span class="sel-group-title">⊕ Indicadores Personalizados</span>
+          <div class="sel-group-ctrl">
+            <button class="sel-toggle-all" onclick="toggleGroup('gcustom',true)">Todos</button>
+            <button class="sel-toggle-all" onclick="toggleGroup('gcustom',false)">Ninguno</button>
+          </div>
+        </div>
+        <div class="sel-items" id="custom-inds-list"></div>
+        <div class="custom-add-form">
+          <div class="caf-row">
+            <input type="text" id="caf-name" placeholder="Nombre del indicador *" maxlength="50" class="caf-input caf-wide">
+            <input type="text" id="caf-valor" placeholder="Valor / dato *" maxlength="30" class="caf-input caf-short">
+            <input type="text" id="caf-bueno" placeholder="Criterio bueno" maxlength="20" class="caf-input caf-short">
+            <input type="text" id="caf-malo" placeholder="Criterio malo" maxlength="20" class="caf-input caf-short">
+            <div class="caf-signals">
+              <label class="caf-sig" title="Positivo"><input type="radio" name="caf-sig" value="🟢" checked> 🟢</label>
+              <label class="caf-sig" title="Neutro"><input type="radio" name="caf-sig" value="🟡"> 🟡</label>
+              <label class="caf-sig" title="Negativo"><input type="radio" name="caf-sig" value="🔴"> 🔴</label>
+            </div>
+            <button class="btn btn-gold btn-sm" onclick="addCustomIndicator()" style="white-space:nowrap;padding:8px 16px">+ Agregar</button>
+          </div>
+          <div id="caf-error" class="caf-error"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-actions">
+    <button class="btn btn-gold btn-large" onclick="parseAndRender()">Generar análisis →</button>
+    <button class="btn btn-outline" onclick="loadExample()">Cargar ejemplo</button>
+    <button class="btn btn-outline" onclick="showLanding()">← Volver</button>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div id="dashboard" style="margin-top:56px;display:none">
+
+  <!-- Compare section — visible when active -->
+  <div id="cl-sec-compare" style="display:none;background:#080E1A;border:1px solid rgba(26,86,196,.25);border-radius:12px;margin:1.25rem 1.25rem 0;padding:1.25rem;box-shadow:0 4px 24px rgba(5,8,15,.5)">
+    <div style="font-size:1rem;font-weight:700;color:#F2CC6E;margin-bottom:1rem;text-transform:uppercase;letter-spacing:.06em">⚖ COMPARACIÓN DE EMPRESAS</div>
+    <div id="cl-compare-header-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem"></div>
+    <div id="cl-compare-table-wrap"></div>
+    <div id="cl-compare-ia-wrap" style="display:none;margin-top:1.2rem;background:rgba(90,155,255,.05);border:1px solid rgba(90,155,255,.18);border-radius:10px;padding:1.2rem">
+      <div style="font-size:.78rem;font-weight:700;color:#5A9BFF;letter-spacing:.08em;margin-bottom:.8rem;text-transform:uppercase">Análisis Comparativo IA</div>
+      <div id="cl-compare-ia-text" style="font-size:.83rem;color:#8FA8C8;line-height:1.7"></div>
+    </div>
+    <button onclick="closeCLCompare()" style="margin-top:1rem;background:transparent;border:1px solid rgba(26,86,196,.3);color:#6A829E;padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-size:.78rem">Cerrar comparación ✕</button>
+  </div>
+
+  <div id="dash-content"></div>
+</div>
+
+<!-- Toast de PDF -->
+<div id="pdf-toast" style="display:none;position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#091428;border:1px solid #1A56C4;color:#B8CEEA;padding:14px 28px;border-radius:8px;font-size:13px;z-index:9999;text-align:center">
+  ⏳ Generando PDF profesional...
+</div>
+
+<!-- ── HISTORIAL PANEL ── -->
+<div id="hist-overlay" onclick="closeHist()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998"></div>
+<div id="hist-panel" style="position:fixed;top:0;right:-420px;width:400px;height:100vh;background:#080E1A;border-left:1px solid rgba(26,86,196,.35);z-index:9999;display:flex;flex-direction:column;transition:right .3s ease;box-shadow:-8px 0 32px rgba(0,0,0,.6)">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:20px 20px 16px;border-bottom:1px solid rgba(26,86,196,.2)">
+    <h3 style="font-size:14px;font-weight:700;color:#fff;letter-spacing:.08em;text-transform:uppercase;margin:0">📋 Historial de análisis</h3>
+    <button onclick="closeHist()" style="background:none;border:none;color:#7A8599;font-size:20px;cursor:pointer">✕</button>
+  </div>
+  <div id="hist-list" style="flex:1;overflow-y:auto;padding:12px"><div id="hist-empty" style="text-align:center;color:#7A8599;font-size:13px;padding:40px 20px">No hay análisis guardados aún.</div></div>
+</div>
+<div id="share-toast" style="position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(60px);background:#1A4FAA;color:#fff;padding:12px 24px;border-radius:8px;font-size:13px;opacity:0;transition:all .3s;z-index:99999;pointer-events:none">✓ Link copiado al portapapeles</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MÓDULO TÉCNICO — INPUT
+════════════════════════════════════════════════════════════ -->
+<div id="tech-input-screen" style="margin-top:56px;display:none">
+  <div class="input-header">
+    <div class="sec-tag" style="padding-top:32px">Análisis Técnico · Metodologías Legendarias</div>
+    <h2 class="input-title">Breakout <span>Analysis</span></h2>
+    <p class="input-sub">Minervini · Kullamagi · Darvas · O'Neill — Señales de entrada, stop y objetivo.</p>
+  </div>
+
+  <!-- Formato -->
+  <div class="template-box">
+    <div class="template-label">Formato requerido — pegá los datos del activo</div>
+    <div class="template-hint">ACCION: Apple Inc. (AAPL)
+PERIODO: Anual 2025              (o: Mensual Enero 2026)
+MONEDA: USD
+
+# ─── PRECIO Y TENDENCIA ───────────────────────────────
+PRECIO_ACTUAL: 220.50
+PRECIO_PIVOTE: 225.00           (resistencia clave / punto de entrada)
+PRECIO_MIN_PATRON: 198.00       (mínimo del patrón / base)
+PRECIO_MAX_52S: 237.23          (máximo 52 semanas)
+PRECIO_MIN_52S: 164.08          (mínimo 52 semanas)
+
+# ─── MEDIAS MÓVILES ───────────────────────────────────
+MA10: 218.40
+MA20: 214.80
+MA50: 205.30
+MA200: 189.60
+TENDENCIA_MA200: subiendo       (subiendo / bajando / lateral)
+
+# ─── VOLUMEN ──────────────────────────────────────────
+VOLUMEN_PROMEDIO: 55000000      (volume promedio 50 días)
+VOLUMEN_HOY: 82000000           (volumen del día de breakout)
+
+# ─── VCP — Minervini ──────────────────────────────────
+VCP_CONTRACCION_1: 18           (% primera contracción)
+VCP_CONTRACCION_2: 10           (% segunda contracción)
+VCP_CONTRACCION_3: 4            (% tercera / última)
+
+# ─── DARVAS BOX ───────────────────────────────────────
+DARVAS_TECHO: 225.00
+DARVAS_PISO: 210.00
+DARVAS_SEMANAS: 7               (semanas que lleva la caja formándose)
+
+# ─── CUP & HANDLE — O'Neill ───────────────────────────
+COPA_PROFUNDIDAD: 22            (% de corrección desde el máximo)
+COPA_SEMANAS: 14                (semanas de formación)
+HANDLE_SEMANAS: 3               (semanas del asa/manejo)
+
+# ─── AVANCE PREVIO — Kullamagi ────────────────────────
+AVANCE_PREVIO: 65               (% de avance antes de la consolidación)
+CONSOLIDACION_SEMANAS: 4
+
+# ─── OBJETIVO Y RIESGO ────────────────────────────────
+STOP_LOSS: 212.00
+PRECIO_OBJETIVO_1: 260.00
+PRECIO_OBJETIVO_2: 290.00
+
+# ─── INDICADORES TÉCNICOS ADICIONALES ─────────────────
+RSI_14: 65.5                    (0-30=sobreventa, 30-70=saludable, 70-80=fuerte, 80+= OB)
+MACD: 0.85                      (valor de la línea MACD)
+MACD_SIGNAL: 0.60               (valor de la línea signal)
+MACD_HIST: 0.25                 (histograma: positivo=alcista, negativo=bajista)
+BB_SUPERIOR: 235.00             (Bollinger Band superior, parámetro 20,2)
+BB_INFERIOR: 195.00             (Bollinger Band inferior, parámetro 20,2)
+ATR_14: 4.20                    (ATR 14 días en $, volatilidad diaria)
+RS_LINE: subiendo               (subiendo / lateral / bajando — vs índice de referencia)
+SECTOR: Tecnología
+SECTOR_TENDENCIA: fuerte        (fuerte / neutral / débil)
+
+# ─── CANSLIM / FUNDAMENTALES — checklist legendarios ──
+EPS_CREC_TRIM: 25               (% crecimiento EPS último trimestre vs mismo trimestre año anterior)
+EPS_CREC_ANUAL: 18              (% crecimiento EPS anual)
+VENTAS_CRECIMIENTO: 12          (% crecimiento de ventas trimestrales)
+ROE: 28                         (Return on Equity %)
+INST_PCT: 65                    (% propiedad institucional del float)
+FLOAT_ACC: 5000000000           (float de acciones en circulación)</div>
+  </div>
+
+  <div id="ca-search-tecnico"></div>
+  <textarea class="paste-area" id="tech-paste-area" placeholder="Pegá aquí los datos del activo para análisis técnico..."></textarea>
+  <div class="parse-error" id="tech-parse-error"></div>
+  <div class="parse-ok"    id="tech-parse-ok"></div>
+
+  <!-- Tipo de período de análisis -->
+  <div style="margin-top:20px;padding:18px 20px;background:var(--bg1);border:1px solid rgba(26,86,196,.2);border-radius:8px">
+    <div style="font-size:11px;letter-spacing:.25em;color:var(--gray2);text-transform:uppercase;margin-bottom:16px">Tipo de período</div>
+    <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+      <!-- ANUAL -->
+      <div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--gray1);margin-bottom:10px">
+          <input type="radio" name="tech-periodo" value="anual" checked style="accent-color:var(--gold2)"> Anual
+        </label>
+        <div id="tp-anual-opts" style="display:flex;gap:8px;margin-left:22px;align-items:center">
+          <select id="tp-anio" style="background:var(--bg2);color:var(--white);border:1px solid rgba(90,155,255,.35);border-radius:5px;padding:6px 10px;font-size:13px;font-family:'Space Mono',monospace">
+            <option>2022</option><option>2023</option><option>2024</option><option selected>2025</option><option>2026</option><option>2027</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- MENSUAL -->
+      <div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--gray1);margin-bottom:10px">
+          <input type="radio" name="tech-periodo" value="mensual" style="accent-color:var(--gold2)"> Mensual
+        </label>
+        <div id="tp-mensual-opts" style="display:none;gap:8px;margin-left:22px;align-items:center">
+          <select id="tp-mes" style="background:var(--bg2);color:var(--white);border:1px solid rgba(90,155,255,.35);border-radius:5px;padding:6px 10px;font-size:13px">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3" selected>Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select id="tp-mes-anio" style="background:var(--bg2);color:var(--white);border:1px solid rgba(90,155,255,.35);border-radius:5px;padding:6px 10px;font-size:13px;font-family:'Space Mono',monospace">
+            <option>2024</option><option>2025</option><option selected>2026</option><option>2027</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- PERÍODO PERSONALIZADO -->
+      <div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--gray1);margin-bottom:10px">
+          <input type="radio" name="tech-periodo" value="custom" style="accent-color:var(--gold2)"> Período personalizado
+        </label>
+        <div id="tp-custom-opts" style="display:none;gap:12px;margin-left:22px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:10px;color:var(--gray2);text-transform:uppercase;letter-spacing:.1em">Desde</span>
+            <input type="date" id="tp-desde" style="background:var(--bg2);color:var(--white);border:1px solid rgba(90,155,255,.35);border-radius:5px;padding:6px 10px;font-size:13px">
+          </div>
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:10px;color:var(--gray2);text-transform:uppercase;letter-spacing:.1em">Hasta</span>
+            <input type="date" id="tp-hasta" style="background:var(--bg2);color:var(--white);border:1px solid rgba(90,155,255,.35);border-radius:5px;padding:6px 10px;font-size:13px">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="input-actions">
+    <button class="btn btn-gold btn-large" onclick="parseTechAndRender()">Generar análisis técnico →</button>
+    <button class="btn btn-outline" onclick="loadTechExample()">Cargar ejemplo</button>
+    <button class="btn btn-outline" onclick="showLanding()">← Volver</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MÓDULO TÉCNICO — DASHBOARD
+════════════════════════════════════════════════════════════ -->
+<div id="tech-dashboard" style="margin-top:56px;display:none">
+  <div id="tech-dash-content"></div>
+</div>
+
+<!-- ── Compare panel CL ──────────────────────────────────────────────── -->
+<div id="compare-overlay-cl" onclick="closeComparePanelCL()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9998;backdrop-filter:blur(3px)"></div>
+<div id="compare-panel-cl" style="position:fixed;top:0;right:-440px;width:420px;height:100vh;background:#080E1A;border-left:1px solid rgba(26,86,196,.25);z-index:9999;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 40px rgba(5,8,15,.7)">
+  <div style="background:#0D1B3E;color:#fff;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700">⚖ Comparar con otra empresa</div>
+    <button onclick="closeComparePanelCL()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.7);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center">✕</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:1rem;background:#080E1A;color:#8FA8C8">
+    <p style="color:#4A5568;font-size:.78rem;margin-bottom:.85rem;line-height:1.5">Comparar <span id="cl-compare-empresa-a" style="color:#C9A84C">empresa actual</span> con:</p>
+    <div id="ca-search-compare-cl"></div>
+    <div style="font-size:.7rem;color:#4A5568;margin:.4rem 0 .6rem;text-align:center;letter-spacing:.04em">— o pegá los datos manualmente —</div>
+    <textarea id="cl-compare-paste-b" placeholder="Pegá aquí los datos financieros de la segunda empresa..." style="width:100%;height:160px;background:rgba(255,255,255,.04);border:1px solid rgba(26,86,196,.25);border-radius:8px;color:#D8E6F5;padding:.6rem .8rem;font-size:.78rem;resize:vertical;font-family:inherit;line-height:1.5;outline:none"></textarea>
+    <div id="cl-compare-error" style="display:none;color:#e74c3c;font-size:.76rem;margin-top:.5rem;padding:.4rem .6rem;background:rgba(231,76,60,.1);border-radius:5px"></div>
+    <div style="margin-top:.75rem;display:flex;gap:.5rem">
+      <button onclick="runCLCompare()" style="flex:1;background:#C9A84C;border:none;color:#0D1B3E;padding:.55rem;border-radius:7px;font-weight:700;font-size:.82rem;cursor:pointer">COMPARAR →</button>
+      <button onclick="closeComparePanelCL()" style="background:transparent;border:1px solid rgba(26,86,196,.3);color:#4A5568;padding:.55rem .9rem;border-radius:7px;cursor:pointer;font-size:.82rem">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js?v=202603207"></script>
+<script src="/js/tech.js?v=202603207"></script>
+<script src="/js/empresa-search.js"></script>
+<script>
+  EmpresaSearch.init({ wrapperId: 'ca-search-checklist', textareaId: 'paste-area',      formato: 'checklist' });
+  EmpresaSearch.init({ wrapperId: 'ca-search-tecnico',   textareaId: 'tech-paste-area', formato: 'checklist' });
+  EmpresaSearch.init({ wrapperId: 'ca-search-compare-cl', textareaId: 'cl-compare-paste-b', formato: 'checklist' });
+</script>
+<style>
+.ca-particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.ca-particle{position:absolute;border-radius:50%;opacity:0;animation:caFloat linear infinite}
+@keyframes caFloat{0%{opacity:0;transform:translateY(0) translateX(0)}10%{opacity:.4}90%{opacity:.15}100%{opacity:0;transform:translateY(-85vh) translateX(15px)}}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 70% 55% at 65% 30%,rgba(26,86,196,.13) 0%,transparent 65%),radial-gradient(ellipse 45% 40% at 10% 80%,rgba(46,116,232,.08) 0%,transparent 60%),radial-gradient(ellipse 30% 30% at 90% 85%,rgba(201,168,76,.06) 0%,transparent 55%)}
+</style>
+<script>
+(function(){var c=document.createElement('div');c.className='ca-particles';document.body.appendChild(c);for(var i=0;i<55;i++){var p=document.createElement('div');p.className='ca-particle';var gold=Math.random()>.65;p.style.cssText='left:'+Math.random()*100+'%;bottom:-8px;width:'+(1+Math.random()*2.5)+'px;height:'+(1+Math.random()*2.5)+'px;background:'+(gold?'rgba(201,168,76,.7)':'rgba(90,155,255,.5)')+';animation-duration:'+(9+Math.random()*14)+'s;animation-delay:'+(Math.random()*12)+'s';c.appendChild(p);}})();
+</script>
+</body>
+</html>
