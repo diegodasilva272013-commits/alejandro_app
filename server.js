@@ -2524,7 +2524,7 @@ app.get('/api/buscar-empresa', async (req, res) => {
   if (!q || q.length < 2) return res.json([]);
   if (!KEY) return res.json([]);
   try {
-    const url = `https://financialmodelingprep.com/api/v3/search?query=${encodeURIComponent(q)}&limit=8&exchange=NASDAQ,NYSE,AMEX&apikey=${KEY}`;
+    const url = `https://financialmodelingprep.com/stable/search-name?query=${encodeURIComponent(q)}&apikey=${KEY}`;
     const r = await fetch(url);
     const text = await r.text();
     let json;
@@ -2532,10 +2532,12 @@ app.get('/api/buscar-empresa', async (req, res) => {
     console.log('FMP search status:', r.status, '| results:', Array.isArray(json) ? json.length : text.slice(0,100));
     const quotes = (Array.isArray(json) ? json : [])
       .slice(0, 7)
+      .filter(item => item.symbol && !item.symbol.includes('.'))
+      .slice(0, 7)
       .map(item => ({
         ticker:   item.symbol,
         nombre:   item.name || item.symbol,
-        exchange: item.stockExchange || item.exchangeShortName || '',
+        exchange: item.exchangeFullName || item.exchange || '',
         tipo:     'EQUITY'
       }));
     res.json(quotes);
