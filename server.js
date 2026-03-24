@@ -2524,9 +2524,12 @@ app.get('/api/buscar-empresa', async (req, res) => {
   if (!q || q.length < 2) return res.json([]);
   if (!KEY) return res.json([]);
   try {
-    const url = `https://financialmodelingprep.com/stable/search?query=${encodeURIComponent(q)}&limit=8&apikey=${KEY}`;
+    const url = `https://financialmodelingprep.com/api/v3/search?query=${encodeURIComponent(q)}&limit=8&exchange=NASDAQ,NYSE,AMEX&apikey=${KEY}`;
     const r = await fetch(url);
-    const json = await r.json();
+    const text = await r.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = []; }
+    console.log('FMP search status:', r.status, '| results:', Array.isArray(json) ? json.length : text.slice(0,100));
     const quotes = (Array.isArray(json) ? json : [])
       .slice(0, 7)
       .map(item => ({
