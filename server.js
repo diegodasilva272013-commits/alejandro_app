@@ -2519,22 +2519,21 @@ app.get('/api/datos-empresa/:ticker', async (req, res) => {
 
 // ─── API: Búsqueda de empresas (proxy Yahoo Finance) ────────────────────────
 app.get('/api/buscar-empresa', async (req, res) => {
-  const q = (req.query.q || '').trim();
+  const q   = (req.query.q || '').trim();
+  const KEY = process.env.FMP_API_KEY;
   if (!q || q.length < 2) return res.json([]);
+  if (!KEY) return res.json([]);
   try {
-    const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0&listsCount=0&enableFuzzyQuery=false`;
-    const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
+    const url = `https://financialmodelingprep.com/stable/search?query=${encodeURIComponent(q)}&limit=8&apikey=${KEY}`;
+    const r = await fetch(url);
     const json = await r.json();
-    const quotes = (json.quotes || [])
-      .filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF')
+    const quotes = (Array.isArray(json) ? json : [])
       .slice(0, 7)
-      .map(q => ({
-        ticker:    q.symbol,
-        nombre:    q.longname || q.shortname || q.symbol,
-        exchange:  q.exchDisp || q.exchange || '',
-        tipo:      q.quoteType || ''
+      .map(item => ({
+        ticker:   item.symbol,
+        nombre:   item.name || item.symbol,
+        exchange: item.stockExchange || item.exchangeShortName || '',
+        tipo:     'EQUITY'
       }));
     res.json(quotes);
   } catch (err) {
