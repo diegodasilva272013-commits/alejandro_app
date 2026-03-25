@@ -3,6 +3,29 @@
 //  Compatible con todos los módulos de Círculo Azul
 // ══════════════════════════════════════════════════════
 
+// Normaliza formato InvestingPro (label\nvalue) a KEY: VALUE para el parser
+function normalizeToKeyValue(raw) {
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
+  const result = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.includes(':')) {
+      result.push(line);
+      i++;
+    } else {
+      const next = lines[i + 1] || '';
+      if (next && !next.includes(':')) {
+        result.push(`${line}: ${next}`);
+        i += 2;
+      } else {
+        i++;
+      }
+    }
+  }
+  return result.join('\n');
+}
+
 // Mapa de aliases: nombre alternativo → clave canónica del mega parser
 const MEGA_ALIAS = {
   // Ingresos
@@ -96,6 +119,21 @@ const MEGA_ALIAS = {
   'spin-off':'SPIN_OFF','spinoff':'SPIN_OFF','spin off':'SPIN_OFF',
   'recompra agresiva':'RECOMPRA','share buyback':'RECOMPRA',
   'venta de activos':'VENTA_ACTIVOS','asset sale':'VENTA_ACTIVOS',
+  // InvestingPro labels
+  'ingresos': 'INGRESOS',
+  'ingresos netos margen accionistas': 'MARGEN_NETO',
+  'margen de intereses minoritarios de los resultados': 'MINORITY_INT_PCT',
+  've / flujo de caja libre': 'EV_FCF',
+  'deuda a largo plazo': 'DEUDA_LP',
+  'depreciación y amortización': 'DA',
+  'efectivo neto (ben graham)': 'EFECTIVO_NETO_BG',
+  'beneficio bruto / activos totales': 'GBPTA',
+  'propiedad, planta y equipo brutos': 'PPE_BRUTOS',
+  'fórmula beneish m-score': 'BENEISH',
+  'capital total': 'CAPITAL_TOTAL',
+  'rotación de activos': 'ASSET_TURNOVER',
+  'relación per (fwd)': 'PER_FWD',
+  'empresa': 'EMPRESA',
 };
 
 const MEGA_CUALITATIVOS = ['BALANCE_SANO','SALUD_DEBIL','VENTAJA_COMP','SECTOR_DETERIORO',
@@ -111,6 +149,7 @@ function megaNormCualit(s) {
 
 // ── PARSER PRINCIPAL ────────────────────────────────────────────────────────
 function megaParse(raw) {
+  raw = normalizeToKeyValue(raw);
   const d = {};
   const lines = raw.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
 
@@ -144,9 +183,14 @@ function megaParse(raw) {
       if (arr.length > 0) { d[canonKey] = arr; continue; }
     }
 
-    // Numérico
-    const num = parseFloat(rawVal.replace(/[$,\s]/g, '').replace(/x$/i, ''));
-    if (!isNaN(num)) { d[canonKey] = num; }
+    // Numérico (con soporte B/M)
+    let numStr = rawVal.replace(/[$,\s]/g, '').replace(/–/g, '-');
+    let mult = 1;
+    if (/[Bb]$/.test(numStr)) { mult = 1000; numStr = numStr.slice(0, -1); }
+    else if (/[Mm]$/.test(numStr)) { mult = 1; numStr = numStr.slice(0, -1); }
+    numStr = numStr.replace(/[x%]$/i, '');
+    const num = parseFloat(numStr);
+    if (!isNaN(num)) { d[canonKey] = num * mult; }
     else { d[canonKey] = rawVal; }
   }
 

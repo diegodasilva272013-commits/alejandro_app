@@ -2402,113 +2402,109 @@ app.get('/api/datos-empresa/:ticker', async (req, res) => {
       ] : []),
     ].join('\n');
 
-    // ── FORMATO ROIMP ─────────────────────────────────────────────────────────
-    const roimp = [
-      `Empresa: ${empresa}`,
-      `TICKER: ${ticker}`,
-      `EV/EBIT: ${evEbit}x`,
-      `EV/EBITDA: ${evEbitda}x`,
-      `WACC: `,
-      `ROIC: ${lastRoic}%`,
-      `Deuda Neta: $${netDebt}M`,
-      `FCF: $${fcfApal}M`,
-      `ROE: ${roe}%`,
-      `ROA: ${roa}%`,
-      `Margen Bruto: ${mBruto}%`,
-      `Margen Neto: ${mNeto}%`,
-      `Margen EBITDA: ${mEbitda}%`,
-    ].join('\n');
-
-    // ── FORMATO SEÑALES ───────────────────────────────────────────────────────
-    const senales = [
-      `ROIC: ${lastRoic}%`,
-      `WACC: `,
-      `ROE: ${roe}%`,
-      `ROA: ${roa}%`,
-      `Margen Bruto: ${mBruto}%`,
-      `Margen Neto: ${mNeto}%`,
-      `Margen EBITDA: ${mEbitda}%`,
-      `PER LTM: ${per}x`,
-      `Deuda Neta / EBITDA: ${dNetaEbitda}x`,
-      `FCF Yield: ${fcfYield}%`,
-      `Deuda / Equity: ${deudaEq}x`,
-      `Current Ratio: ${currentR}x`,
-      `Balance sano: ${balanceSano}`,
-      `Ventaja competitiva: ${ventajaComp}`,
-    ].join('\n');
-
-    // ── FORMATO ACCIONES 360 ──────────────────────────────────────────────────
-    const lastIngreso  = ingresos[ingresos.length-1]  || 0;
-    const lastEbit     = ebitArr[ebitArr.length-1]    || 0;
-    const lastGanNeta  = ganNetas[ganNetas.length-1]  || 0;
-    const lastUtilBruta = utilBruta[utilBruta.length-1] || 0;
-    const lastOfc      = ofcArr[ofcArr.length-1]      || 0;
-    const lastCapexV   = capexArr[capexArr.length-1]  || 0;
-    const icr          = gastoInt && gastoInt !== 0 ? n1(lastEbit / Math.abs(gastoInt), 2) : null;
-    const quickR       = actCorr && inv !== null ? n1((actCorr - inv) / (pasCorr || 1), 2) : null;
-    const bpaGrowth    = bpaArr.length >= 2 && bpaArr[bpaArr.length-2] !== 0
-      ? n1(((bpaArr[bpaArr.length-1] - bpaArr[bpaArr.length-2]) / Math.abs(bpaArr[bpaArr.length-2])) * 100, 2)
+    // ── Cálculos adicionales ──────────────────────────────────────────────────
+    const lastEbitVal   = ebitArr[ebitArr.length - 1]    || 0;
+    const lastUBruta    = utilBruta[utilBruta.length - 1] || 0;
+    const lastGanNetaV  = ganNetas[ganNetas.length - 1]   || 0;
+    const lastOfc       = ofcArr[ofcArr.length - 1]       || 0;
+    const lastCapexV    = capexArr[capexArr.length - 1]   || 0;
+    const shares        = n1((i0.weightedAverageShsOutDil || 0) / M, 1);
+    const icr           = gastoInt && gastoInt !== 0 ? n1(lastEbitVal / Math.abs(gastoInt), 1) : null;
+    const quickR        = actCorr && inv !== null ? n1((actCorr - inv) / (pasCorr || 1), 1) : null;
+    const bpaGrowth     = bpaArr.length >= 2 && bpaArr[bpaArr.length-2] !== 0
+      ? n1(((bpaArr[bpaArr.length-1] - bpaArr[bpaArr.length-2]) / Math.abs(bpaArr[bpaArr.length-2])) * 100, 1)
       : null;
-    const a360 = [
-      `Empresa: ${empresa}`,
-      `ticker: ${ticker}`,
-      ``,
-      `// P&L`,
-      `Ingresos totales: ${lastIngreso}`,
-      `Utilidad bruta: ${lastUtilBruta}`,
-      `EBIT: ${lastEbit}`,
-      `EBITDA: ${lastEbitda}`,
-      `Ganancia neta: ${lastGanNeta}`,
-      ``,
-      `// Flujo de caja`,
-      `FCF: ${fcfApal}`,
-      `Efectivo de las operaciones: ${lastOfc}`,
-      `Gastos de capital: ${lastCapexV}`,
-      ``,
-      `// Retornos`,
-      `ROE: ${roe}`,
-      `ROA: ${roa}`,
-      `ROIC: ${lastRoic}`,
-      ...(bpaGrowth !== null ? [`Crecimiento básico del BPA: ${bpaGrowth}`] : []),
-      ``,
-      `// Valoración`,
-      `PER: ${per}`,
-      `EV/EBITDA: ${evEbitda}`,
-      `EV/EBIT: ${evEbit}`,
-      `Rendimiento de flujo de caja libre: ${fcfYield}`,
-      `Ratio PEG: ${peg}`,
-      `Valor de la empresa: ${ev}`,
-      ...(precioActual ? [`Precio de la acción: ${precioActual}`] : []),
-      ``,
-      `// Márgenes`,
-      `Margen beneficio bruto: ${mBruto}`,
-      `Margen EBITDA: ${mEbitda}`,
-      `Margen neto: ${mNeto}`,
-      ``,
-      `// Balance / Deuda`,
-      `Activos totales: ${actTot}`,
-      `Efectivo y equivalentes: ${caja}`,
-      `Deuda total: ${deudaTot}`,
-      `Deuda neta: ${netDebt}`,
-      `Deuda neta / EBITDA: ${dNetaEbitda}`,
-      `Deuda / patrimonio: ${deudaEq}`,
-      `Equity: ${n1((b0.totalStockholdersEquity || 0) / M, 0)}`,
-      ...(icr !== null ? [`Ratio de cobertura de intereses: ${icr}`] : []),
-      `Ratio de solvencia: ${currentR}`,
-      ...(quickR !== null ? [`Prueba ácida: ${quickR}`] : []),
-      ``,
-      `// Scoring`,
-      `Fórmula Altman Z-Score: ${altman}`,
-      `Acc. en circulación: ${n1((i0.weightedAverageShsOutDil || 0) / M, 0)}`,
-    ].join('\n');
+    const mEbit             = lastIngr > 0 ? n1(lastEbitVal / lastIngr * 100, 1) : null;
+    const evFCF             = fcfApal > 0  ? n1(ev / fcfApal, 1) : null;
+    const deudaLP           = mM(b0.longTermDebt || 0, 1);
+    const da                = mM(Math.abs(cf0.depreciationAndAmortization || 0), 1);
+    const totLiabM          = mM(b0.totalLiabilities || 0, 0);
+    const efectivoNetoBG    = n1(caja - totLiabM, 0);
+    const gbpTA             = actTot > 0 ? n1(lastUBruta / actTot * 100, 1) : null;
+    const capitalTotal      = n1((equityArr[equityArr.length-1] || 0) + deudaTot, 0);
+    const assetTurnover     = actTot > 0 ? n1(lastIngr / actTot, 2) : null;
+    const minorityIntPct    = i0.revenue ? n1((i0.minorityInterest || 0) / i0.revenue * 100, 1) : null;
+    const fcfMargenApalPct  = lastIngr > 0 ? n1(fcfApal    / lastIngr * 100, 1) : null;
+    const fcfMargenSinApalPct = lastIngr > 0 ? n1(fcfSinApal / lastIngr * 100, 1) : null;
+    const deudaEqPct        = n1((r0.debtToEquityRatio || 0) * 100, 1);
+    const eqLast            = equityArr[equityArr.length-1] || 0;
+
+    // ── Helper: formato InvestingPro ──────────────────────────────────────────
+    function ipFmt(valM, type = 'money') {
+      if (valM == null || valM === 'N/D') return null;
+      const v = typeof valM === 'number' ? valM : Number(valM);
+      if (isNaN(v)) return null;
+      if (type === 'pct')  return v.toFixed(1) + '%';
+      if (type === 'x')    return v.toFixed(1) + 'x';
+      if (type === 'raw')  return String(v);
+      const abs = Math.abs(v);
+      if (abs >= 1000) return parseFloat((v / 1000).toFixed(3)) + ' B';
+      return parseFloat(v.toFixed(1)) + ' M';
+    }
+    function ip(label, val) {
+      return (val != null && val !== '') ? `${label}\n${val}` : null;
+    }
+
+    // ── FORMATO INVESTINGPRO (mega, acciones360, roimp, señales) ─────────────
+    const investingPro = [
+      ip('Empresa',                                           empresa),
+      ip('TICKER',                                            ticker),
+      ip('Ingresos',                                          ipFmt(lastIngr)),
+      ip('Utilidad bruta',                                    ipFmt(lastUBruta)),
+      ip('Ganancias netas',                                   ipFmt(lastGanNetaV)),
+      ip('Margen beneficio bruto',                            ipFmt(mBruto, 'pct')),
+      ip('Ingresos netos margen accionistas',                 ipFmt(mNeto, 'pct')),
+      ip('Flujo de caja libre neto',                          ipFmt(fcfApal)),
+      ip('Rendimiento de flujo de caja libre',                ipFmt(fcfYield, 'pct')),
+      minorityIntPct !== null ? ip('Margen de intereses minoritarios de los resultados', ipFmt(minorityIntPct, 'pct')) : null,
+      evFCF !== null          ? ip('VE / Flujo de caja libre',    ipFmt(evFCF, 'x'))    : null,
+      mEbit !== null          ? ip('Margen EBIT',                  ipFmt(mEbit, 'pct')) : null,
+      ip('PER',                                               ipFmt(per, 'x')),
+      ip('Ratio PEG',                                         ipFmt(peg, 'raw')),
+      ip('Rendimiento de capital',                            ipFmt(roe, 'pct')),
+      ip('Rendimiento del capital invertido',                 ipFmt(lastRoic, 'pct')),
+      ip('Rendimiento de activos',                            ipFmt(roa, 'pct')),
+      ip('Capital contable',                                  ipFmt(eqLast)),
+      ip('VE/EBIT',            evEbit   !== 'N/D' ? ipFmt(evEbit,   'x') : null),
+      ip('VE/EBITDA',          evEbitda !== 'N/D' ? ipFmt(evEbitda, 'x') : null),
+      ip('Ratio de solvencia',                                ipFmt(currentR, 'x')),
+      quickR !== null ? ip('Prueba ácida',                    ipFmt(quickR, 'x'))  : null,
+      icr    !== null ? ip('Ratio de Cobertura de Intereses', ipFmt(icr,    'x'))  : null,
+      ip('Deuda / Patrimonio',                                ipFmt(deudaEqPct, 'pct')),
+      dNetaEbitda !== 'N/D' ? ip('Deuda neta / EBITDA',      ipFmt(dNetaEbitda, 'x')) : null,
+      ip('Deuda neta',                                        ipFmt(netDebt)),
+      ip('Deuda total',                                       ipFmt(deudaTot)),
+      deudaLP ? ip('Deuda a largo plazo',                     ipFmt(deudaLP)) : null,
+      ip('Margen de flujo de caja libre sin apalancamiento',  ipFmt(fcfMargenSinApalPct, 'pct')),
+      ip('Margen de flujo de caja libre apalancado',          ipFmt(fcfMargenApalPct,    'pct')),
+      ip('EBIT',                                              ipFmt(lastEbitVal)),
+      ip('EBITDA',                                            ipFmt(lastEbitda)),
+      ip('Margen EBITDA',                                     ipFmt(mEbitda, 'pct')),
+      ip('Valor de la empresa (VE)',                          ipFmt(ev)),
+      ip('Gastos de capital',                                 ipFmt(lastCapexV)),
+      ip('Margen de gastos de capital',                       ipFmt(margenCapex, 'pct')),
+      da ? ip('Depreciación y amortización',                  ipFmt(da)) : null,
+      ip('Efectivo neto (Ben Graham)',                        ipFmt(efectivoNetoBG)),
+      gbpTA !== null ? ip('Beneficio bruto / Activos totales', ipFmt(gbpTA, 'pct')) : null,
+      ppe   ? ip('Propiedad, planta y equipo brutos',         ipFmt(ppe)) : null,
+      ip('Fórmula Altman Z-Score',                            ipFmt(altman, 'raw')),
+      ip('Efectivo de las operaciones',                       ipFmt(lastOfc)),
+      bpaGrowth !== null ? ip('Crecimiento básico del BPA',   ipFmt(bpaGrowth, 'pct')) : null,
+      capitalTotal ? ip('Capital total',                      ipFmt(capitalTotal)) : null,
+      assetTurnover !== null ? ip('Rotación de Activos',      ipFmt(assetTurnover, 'x')) : null,
+      ip('Efectivo y equivalentes',                           ipFmt(caja)),
+      shares ? ip('Acc. en circulación',                      ipFmt(shares)) : null,
+      balanceSano  ? ip('Balance sano',                       balanceSano)   : null,
+      ventajaComp  ? ip('Ventaja competitiva',                ventajaComp)   : null,
+    ].filter(Boolean).join('\n');
 
     res.json({
       meta: { empresa, ticker, sector: prof?.sector || '', moneda, precio: prof?.price || null },
       checklist,
-      mega: checklist,
-      roimp,
-      senales,
-      acciones360: a360,
+      mega:        investingPro,
+      roimp:       investingPro,
+      senales:     investingPro,
+      acciones360: investingPro,
     });
 
   } catch (err) {

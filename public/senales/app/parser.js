@@ -68,16 +68,36 @@ const FIELD_MAP = {
   spin_off:            ['spin-off','spinoff','spin off'],
   recompra:            ['recompra agresiva','recompra de acciones','buyback agresivo','share buyback'],
   venta_activos:       ['venta de activos','asset sale','venta activos'],
+  // InvestingPro labels
+  ingresos_netos_margin: ['ingresos netos margen accionistas'],
+  minority_int:          ['margen de intereses minoritarios de los resultados'],
+  ev_fcf:                ['ve / flujo de caja libre', 'ev/fcf', 've/fcf'],
+  deuda_lp:              ['deuda a largo plazo'],
+  da:                    ['depreciación y amortización', 'depreciation and amortization'],
+  efectivo_bg:           ['efectivo neto (ben graham)'],
+  gbpta:                 ['beneficio bruto / activos totales'],
+  ppe_brutos:            ['propiedad, planta y equipo brutos'],
+  beneish:               ['fórmula beneish m-score', 'beneish m-score'],
+  capital_total:         ['capital total'],
+  asset_turnover:        ['rotación de activos', 'asset turnover'],
+  relacion_per_fwd:      ['relación per (fwd)'],
+  efectivo_equiv:        ['efectivo y equivalentes', 'cash and equivalents'],
+  acciones_circ:         ['acc. en circulación', 'acciones en circulación'],
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 function limpiarNumero(str) {
   if (!str) return DF;
-  const s = String(str).trim().replace(/,/g, '.');
-  // quitar símbolos comunes: %, x, $, M, B, K, €
-  const num = parseFloat(s.replace(/[%xX$€MBKb\s]/g, ''));
-  return isNaN(num) ? DF : num;
+  const s = String(str).trim().replace(/,(?=\d{3})/g, '');
+  let num = s.replace(/[$€\s]/g, '').replace(/–/g, '-');
+  let mult = 1;
+  if (/[Bb]$/.test(num)) { mult = 1000; num = num.slice(0, -1); }
+  else if (/[Mm]$/.test(num)) { mult = 1; num = num.slice(0, -1); }
+  else if (/[Kk]$/.test(num)) { mult = 0.001; num = num.slice(0, -1); }
+  num = num.replace(/[%xX]/g, '');
+  const val = parseFloat(num);
+  return isNaN(val) ? DF : val * mult;
 }
 
 function normalizarCualitativo(str) {
@@ -114,12 +134,22 @@ function parsearTexto(texto) {
   // Inicializar todos los campos en DF
   for (const campo of Object.keys(FIELD_MAP)) datos[campo] = DF;
 
-  const lineas = texto.split(/\n|\r/).map(l => l.trim()).filter(l => l.length > 2);
+  const lineas = texto.split(/\n|\r/).map(l => l.trim()).filter(l => l.length > 1 && !l.startsWith('#') && !l.startsWith('//'));
 
-  for (const linea of lineas) {
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
     const campo = buscarCampo(linea);
     if (!campo) continue;
-    const valorRaw = extraerValor(linea);
+
+    // Intentar valor en misma línea (KEY: VALUE) o siguiente línea (InvestingPro)
+    let valorRaw = extraerValor(linea);
+    if (!valorRaw && i + 1 < lineas.length) {
+      const sig = lineas[i + 1].trim();
+      if (sig && /^[-–]?[\d$]/.test(sig)) {
+        valorRaw = sig;
+        i++;
+      }
+    }
     if (!valorRaw) continue;
 
     if (CUALITATIVOS.includes(campo)) {

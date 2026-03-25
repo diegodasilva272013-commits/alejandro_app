@@ -8,7 +8,7 @@ const Reader = {
     ticker:           ['ticker', 'símbolo', 'simbolo', 'symbol'],
 
     // P&L
-    ingresos:         ['ingresos ', 'ingresos)', 'ingresos totales', 'ventas netas', 'revenue', 'total revenue', 'net revenue'],
+    ingresos:         ['ingresos totales', 'ingresos ', 'ingresos)', 'ventas netas', 'revenue', 'total revenue', 'net revenue', 'ingresos\n'],
     utilidad_bruta:   ['utilidad bruta', 'ganancia bruta', 'gross profit', 'beneficio bruto'],
     ebit:             ['ebit ', 'ebit)', 'ebit (', 'utilidad operativa', 'operating income', 'beneficio operativo'],
     ebitda:           ['ebitda ', 'ebitda)', 'ebitda ('],
@@ -64,6 +64,18 @@ const Reader = {
     activos_totales:  ['activos totales', 'total assets', 'total activos', 'activo total'],
     caja:             ['efectivo y equivalentes', 'cash and equivalents', 'caja y equivalentes', 'cash)', 'cash (', 'efectivo)'],
     precio_accion:    ['precio de la acción', 'precio acción', 'stock price', 'share price', 'precio actual', 'precio cierre'],
+
+    // InvestingPro labels
+    ingresos_netos_margin: ['ingresos netos margen accionistas'],
+    minority_int:          ['margen de intereses minoritarios de los resultados'],
+    deuda_lp:              ['deuda a largo plazo', 'long-term debt'],
+    da:                    ['depreciación y amortización', 'depreciation and amortization'],
+    efectivo_bg:           ['efectivo neto (ben graham)'],
+    gbpta:                 ['beneficio bruto / activos totales'],
+    ppe_brutos:            ['propiedad, planta y equipo brutos'],
+    beneish:               ['fórmula beneish m-score', 'beneish m-score'],
+    capital_total:         ['capital total'],
+    asset_turnover:        ['rotación de activos', 'rotacion de activos'],
 
     // Indicadores CF — calidad de flujo de caja
     book_to_bill:     ['book-to-bill', 'book to bill', 'relación pedidos/facturación', 'orders/revenue'],
