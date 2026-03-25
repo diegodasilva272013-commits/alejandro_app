@@ -2517,22 +2517,35 @@ app.get('/api/datos-empresa/:ticker', async (req, res) => {
   }
 });
 
-// ─── API: Búsqueda de empresas (proxy Yahoo Finance) ────────────────────────
+// ─── API: Búsqueda de empresas ───────────────────────────────────────────────
 app.get('/api/buscar-empresa', async (req, res) => {
-  const q   = (req.query.q || '').trim().toUpperCase();
+  const q   = (req.query.q || '').trim();
   const KEY = process.env.FMP_API_KEY;
   if (!q || q.length < 1) return res.json([]);
   if (!KEY) return res.json([]);
   try {
-    // Validar el ticker directamente con /profile (endpoint que ya funciona)
-    const r = await fetch(`https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(q)}&apikey=${KEY}`);
-    const json = await r.json();
-    const profile = Array.isArray(json) ? json[0] : null;
-    if (!profile || !profile.symbol) return res.json([]);
-    res.json([{
-      ticker:   profile.symbol,
-      nombre:   profile.companyName || profile.symbol,
-      exchange: profile.exchangeFullName || profile.exchange || '',
+    // 1) Intentar búsqueda general (por nombre o ticker)
+    const r1   = await fetch(`https://financialmodelingprep.com/stable/search?query=${encodeURIComponent(q)}&limit=7&apikey=${KEY}`);
+    const j1   = await r1.json();
+    // Si responde con array válido, usarlo
+    if (Array.isArray(j1) && j1.length > 0 && j1[0].symbol) {
+      return res.json(j1.slice(0, 7).map(item => ({
+        ticker:   item.symbol,
+        nombre:   item.name || item.companyName || item.symbol,
+        exchange: item.stockExchange || item.exchangeShortName || '',
+        tipo:     item.type || 'EQUITY'
+      })));
+    }
+    // 2) Fallback: validar como ticker exacto con /profile
+    const ticker = q.toUpperCase();
+    const r2   = await fetch(`https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(ticker)}&apikey=${KEY}`);
+    const j2   = await r2.json();
+    const prof = Array.isArray(j2) ? j2[0] : null;
+    if (!prof || !prof.symbol) return res.json([]);
+    return res.json([{
+      ticker:   prof.symbol,
+      nombre:   prof.companyName || prof.symbol,
+      exchange: prof.exchangeFullName || prof.exchange || '',
       tipo:     'EQUITY'
     }]);
   } catch (err) {
