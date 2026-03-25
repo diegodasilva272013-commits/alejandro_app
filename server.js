@@ -2522,16 +2522,18 @@ app.get('/api/buscar-empresa', async (req, res) => {
   const q   = (req.query.q || '').trim();
   const KEY = process.env.FMP_API_KEY;
   if (!q || q.length < 2) return res.json([]);
-  if (!KEY) return res.json([]);
+  if (!KEY) {
+    console.error('FMP_API_KEY no configurada en variables de entorno');
+    return res.json([{ ticker:'ERROR', nombre:'FMP_API_KEY no configurada en el servidor', exchange:'', tipo:'' }]);
+  }
   try {
     const url = `https://financialmodelingprep.com/stable/search-name?query=${encodeURIComponent(q)}&apikey=${KEY}`;
     const r = await fetch(url);
     const text = await r.text();
     let json;
     try { json = JSON.parse(text); } catch { json = []; }
-    console.log('FMP search status:', r.status, '| results:', Array.isArray(json) ? json.length : text.slice(0,100));
+    console.log('FMP search status:', r.status, '| results:', Array.isArray(json) ? json.length : text.slice(0,120));
     const quotes = (Array.isArray(json) ? json : [])
-      .slice(0, 7)
       .filter(item => item.symbol && !item.symbol.includes('.'))
       .slice(0, 7)
       .map(item => ({
