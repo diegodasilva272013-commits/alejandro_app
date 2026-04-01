@@ -6,6 +6,7 @@
 <title>Análisis IA — Círculo Azul Finanzas</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
 <style>
 :root {
   --navy:  #05080F;
@@ -1586,21 +1587,49 @@ function mostrarResultado(data) {
 
 // ── Descargar PDF ─────────────────────────────────────────────────────────
 async function descargarPDF() {
-  if (!_jobId) return;
   const btn = document.getElementById('btn-download');
-  btn.textContent = 'Descargando…'; btn.disabled = true;
+  btn.textContent = '⏳ Generando…'; btn.disabled = true;
   try {
-    const resp = await fetch('/api/analisis/descargar/' + _jobId);
-    if (!resp.ok) throw new Error('No se pudo descargar el PDF');
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const d    = _datos || {};
-    const tick = d.empresa_ticker || _empresa.replace(/\s+/g,'_');
-    a.href     = url;
-    a.download = tick + '_Analisis_CirculoAzul.pdf';
-    a.click();
-    URL.revokeObjectURL(url);
+    // Intentar descargar el PDF pre-generado del servidor
+    if (_jobId) {
+      const resp = await fetch('/api/analisis/descargar/' + _jobId);
+      if (resp.ok) {
+        const blob = await resp.blob();
+        if (blob.size > 500) {
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement('a');
+          const d    = _datos || {};
+          const tick = d.empresa_ticker || _empresa.replace(/\s+/g,'_');
+          a.href     = url;
+          a.download = tick + '_Analisis_CirculoAzul.pdf';
+          a.click();
+          URL.revokeObjectURL(url);
+          return;
+        }
+      }
+    }
+    // Fallback: generar PDF client-side con html2pdf
+    const screenResult = document.getElementById('screen-result');
+    if (!screenResult) throw new Error('No hay resultado para exportar');
+
+    // Ocultar botones temporalmente
+    const actions = screenResult.querySelector('.result-actions');
+    if (actions) actions.style.display = 'none';
+
+    const d = _datos || {};
+    const tick = d.empresa_ticker || (_empresa || 'Analisis').replace(/\s+/g,'_');
+    const filename = tick + '_Analisis_CirculoAzul.pdf';
+
+    await html2pdf().set({
+      margin:       [8, 6, 8, 6],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(screenResult).save();
+
+    if (actions) actions.style.display = '';
   } catch(e) {
     alert('Error al descargar: ' + e.message);
   } finally {

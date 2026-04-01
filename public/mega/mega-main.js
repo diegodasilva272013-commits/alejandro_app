@@ -475,12 +475,12 @@ async function generarPDF() {
     const dash = document.getElementById('screen-dash');
     if (!dash) throw new Error('No hay dashboard activo');
 
-    // ── PASO 1: Mostrar todos los tabs temporalmente para que los canvas se rendericen ──
+    // Mostrar todos los tabs temporalmente
     const tabs = Array.from(dash.querySelectorAll('.tab-content'));
     const prevDisplay = tabs.map(t => t.style.display);
     tabs.forEach(t => { t.style.display = 'block'; });
 
-    // Forzar re-render de todos los charts de Chart.js (los canvases en tabs hidden no se renderizan automáticamente)
+    // Forzar re-render de charts
     if (typeof Chart !== 'undefined') {
       dash.querySelectorAll('canvas').forEach(cv => {
         try {
@@ -489,96 +489,27 @@ async function generarPDF() {
         } catch(e) {}
       });
     }
-    await new Promise(r => setTimeout(r, 400)); // dar tiempo a Chart.js para pintar
+    await new Promise(r => setTimeout(r, 400));
 
-    // ── PASO 2: Capturar todos los canvas por índice ──
-    const canvasDataUrls = Array.from(dash.querySelectorAll('canvas')).map(cv => {
-      try { return cv.toDataURL('image/png'); } catch(e) { return null; }
-    });
+    // Ocultar UI elements temporalmente
+    const hideEls = dash.querySelectorAll('.mega-nav, .tab-bar, .tab-bar-wrap, #nav-pdf-area, .no-print, .btn-pdf, .btn-mega, .btn-secondary, #btn-pdf-top, #btn-pdf-dash');
+    hideEls.forEach(el => { el.dataset.prevDisplay = el.style.display; el.style.display = 'none'; });
 
-    // ── PASO 3: Restaurar visibilidad original ──
-    tabs.forEach((t, i) => { t.style.display = prevDisplay[i]; });
-
-    // ── PASO 4: Clonar el dashboard ──
-    const clone = dash.cloneNode(true);
-
-    // ── PASO 5: En el clon, mostrar solo tabs con contenido real ──
-    const cloneTabs = Array.from(clone.querySelectorAll('.tab-content'));
-    cloneTabs.forEach(t => {
-      const hasContent = t.innerHTML.trim().length > 50;
-      if (hasContent) {
-        t.style.cssText = 'display:block!important;opacity:1!important;visibility:visible!important;height:auto!important;overflow:visible!important;page-break-inside:avoid';
-      } else {
-        t.remove(); // eliminar tabs vacíos para evitar páginas en blanco
-      }
-    });
-
-    // ── PASO 6: Reemplazar canvas por imágenes en el clon ──
-    const cloneCanvases = Array.from(clone.querySelectorAll('canvas'));
-    cloneCanvases.forEach((cv, i) => {
-      const dataUrl = canvasDataUrls[i];
-      if (dataUrl) {
-        const img = document.createElement('img');
-        img.src = dataUrl;
-        img.style.cssText = 'width:100%;height:auto;display:block;border-radius:6px';
-        cv.parentNode.replaceChild(img, cv);
-      }
-    });
-
-    // ── PASO 7: Limpiar elementos de UI del clon ──
-    clone.querySelectorAll(
-      '.mega-nav, .tab-bar, .tab-bar-wrap, #nav-pdf-area, .no-print, ' +
-      '.btn-pdf, .btn-mega, .btn-secondary, #btn-pdf-top, #btn-pdf-dash, ' +
-      '#screen-input, #screen-progress'
-    ).forEach(el => el.remove());
-
-    // ── PASO 8: Construir HTML completo para Puppeteer ──
-    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(el => el.outerHTML).join('\n');
     const empresa = (document.getElementById('dash-empresa') || {}).textContent || 'Mega Reporte';
+    const filename = empresa.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g, '_') + '_MegaReporte_CirculoAzul.pdf';
 
-    const fullHTML = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>${empresa} — Mega Reporte Círculo Azul</title>
-${styles}
-<style>
-  *, *::before, *::after {
-    -webkit-print-color-adjust:exact !important;
-    print-color-adjust:exact !important;
-    animation:none !important;
-    transition:none !important;
-  }
-  html, body { margin:0; padding:0; background:#05080F; font-family:'Inter',sans-serif; color:#fff; }
-  .mega-nav,.tab-bar,.tab-bar-wrap,.btn-pdf,.btn-mega,.no-print,
-  #nav-pdf-area,#screen-input,#screen-progress { display:none !important; }
-  #screen-dash { display:block !important; padding:0 !important; }
-  .tab-content { display:block !important; opacity:1 !important; height:auto !important;
-    overflow:visible !important; padding:1.5rem 2rem !important;
-    page-break-before:auto !important; break-before:auto !important; }
-  .tab-content + .tab-content {
-    border-top:2px solid rgba(90,155,255,.2); margin-top:1rem;
-    page-break-before:auto !important; break-before:auto !important; }
-  img { max-width:100%; height:auto; }
-  canvas { display:none !important; }
-</style>
-</head><body>${clone.outerHTML}</body></html>`;
+    await html2pdf().set({
+      margin:       [8, 4, 8, 4],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(dash).save();
 
-    const resp = await fetch('/api/pdf360', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullHTML, companyName: empresa })
-    });
-
-    if (!resp.ok) throw new Error('Error servidor: ' + resp.status);
-
-    const blob = await resp.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = empresa.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g, '_') + '_MegaReporte_CirculoAzul.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    // Restaurar visibilidad
+    hideEls.forEach(el => { el.style.display = el.dataset.prevDisplay || ''; delete el.dataset.prevDisplay; });
+    tabs.forEach((t, i) => { t.style.display = prevDisplay[i]; });
 
   } catch(err) {
     console.error('generarPDF Mega error:', err);

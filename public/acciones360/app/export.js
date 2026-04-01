@@ -1,7 +1,7 @@
 // ── export.js — Módulo 5: Exportación PDF y Word ──────────────────────────────
 const Exporter = {
 
-  // ── Descarga PDF via Puppeteer (server-side, consistente) ───────────────────
+  // ── Descarga PDF via html2pdf (client-side, consistente) ───────────────────
   async exportPDF(empresa) {
     const dash = document.getElementById('screen-dashboard');
     if (!dash) return;
@@ -10,63 +10,27 @@ const Exporter = {
     if (btnPDF) { btnPDF.disabled = true; btnPDF.textContent = '⏳ Generando...'; }
 
     try {
-      const clone = dash.cloneNode(true);
-      clone.style.display = 'block';
-
-      // Canvases → imágenes estáticas para Puppeteer
-      const origCanvases  = dash.querySelectorAll('canvas');
-      const cloneCanvases = clone.querySelectorAll('canvas');
-      origCanvases.forEach((cv, i) => {
-        try {
-          const img = document.createElement('img');
-          img.src = cv.toDataURL('image/png');
-          img.style.cssText = 'width:100%;height:auto;display:block;border-radius:4px';
-          if (cloneCanvases[i]) cloneCanvases[i].replaceWith(img);
-        } catch(e) {}
-      });
-
-      // Quitar sidebar y elementos de UI
-      ['dash-sidebar', 'nav-export-btns', 'slide-panel', 'panel-overlay'].forEach(cls => {
-        const el = clone.querySelector('.' + cls); if (el) el.remove();
-      });
-
-      const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-        .map(el => el.outerHTML).join('\n');
-
       const empresa2 = empresa || 'Acciones 360';
-      const fecha = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
+      const filename = empresa2.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g, '_') + '_A360_CirculoAzul.pdf';
 
-      const fullHTML = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>${empresa2} — Análisis 360°</title>
-${styles}
-<style>
-  *, *::before, *::after { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; animation:none !important; transition:none !important; box-sizing:border-box; }
-  html, body { margin:0; padding:0; background:#05080F; font-family:'Inter',sans-serif; }
-  .app-header,.topbar,.topbar-actions,.dash-sidebar,.nav-export-btns,.slide-panel,.panel-overlay,#err-banner,#screen-pdf,#screen-input,#screen-confirm,#screen-loading { display:none !important; }
-  .dash-layout { display:block !important; padding-top:0 !important; height:auto !important; }
-  .dash-main { margin-left:0 !important; max-width:100% !important; padding:1.5rem 2rem !important; height:auto !important; }
-  .section-block { overflow:visible !important; margin-bottom:1.2rem; page-break-inside:avoid; }
-  .kpi-card,.indicator-card,.score-card { break-inside:avoid; }
-</style>
-</head><body>${clone.outerHTML}</body></html>`;
+      // Temporalmente ocultar sidebar y botones para el PDF
+      const sidebar = dash.querySelector('.dash-sidebar');
+      const exportBtns = dash.querySelector('.nav-export-btns');
+      if (sidebar) sidebar.style.display = 'none';
+      if (exportBtns) exportBtns.style.display = 'none';
 
-      const resp = await fetch('/api/pdf360', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullHTML, companyName: empresa2 })
-      });
+      await html2pdf().set({
+        margin:       [8, 4, 8, 4],
+        filename:     filename,
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+      }).from(dash).save();
 
-      if (!resp.ok) throw new Error('Error del servidor: ' + resp.status);
-
-      const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = (empresa2).replace(/[^a-zA-Z0-9\u00C0-\u024F]/g, '_') + '_A360_CirculoAzul.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      // Restaurar elementos ocultos
+      if (sidebar) sidebar.style.display = '';
+      if (exportBtns) exportBtns.style.display = '';
 
     } catch(err) {
       console.error('exportPDF error:', err);

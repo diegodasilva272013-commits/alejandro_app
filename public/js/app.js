@@ -1614,68 +1614,31 @@ function removeCustomIndicator(id){
 //  PDF VÍA SERVIDOR (Puppeteer)
 // ══════════════════════════════════════════
 async function generarPDF() {
-  var toast = document.getElementById('pdf-toast');
-  if (toast) toast.style.display = 'flex';
+  var btn = document.getElementById('btn-pdf');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
 
   try {
-    // Contenido del dashboard
     var dashContent = document.getElementById('dash-content');
     if (!dashContent) throw new Error('No hay dashboard activo');
 
-    // Nombre de empresa y fecha
     var companyEl   = document.getElementById('pdf-company-name');
     var companyName = companyEl ? companyEl.textContent.trim() : 'Empresa';
-    var reportDate  = new Date().toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' });
+    var filename    = companyName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_') + '_CirculoAzul.pdf';
 
-    // Clonar el HTML para limpiar interactividad antes de enviarlo
-    var clone = dashContent.cloneNode(true);
-
-    // Resolver las canvas de Chart.js a imágenes estáticas
-    var canvases = dashContent.querySelectorAll('canvas');
-    var cloneCanvases = clone.querySelectorAll('canvas');
-    canvases.forEach(function(cv, i) {
-      try {
-        var img = document.createElement('img');
-        img.src = cv.toDataURL('image/png');
-        img.style.width  = '100%';
-        img.style.height = 'auto';
-        img.style.display = 'block';
-        if (cloneCanvases[i] && cloneCanvases[i].parentNode) {
-          cloneCanvases[i].parentNode.replaceChild(img, cloneCanvases[i]);
-        }
-      } catch(e) { /* canvas puede fallar por CORS */ }
-    });
-
-    var dashboardHTML = clone.innerHTML;
-
-    var resp = await fetch('/api/pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dashboardHTML: dashboardHTML, companyName: companyName, reportDate: reportDate })
-    });
-
-    if (!resp.ok) {
-      var err = await resp.json().catch(function(){ return { error: 'Error del servidor' }; });
-      throw new Error(err.error || ('HTTP ' + resp.status));
-    }
-
-    var blob = await resp.blob();
-    var url  = URL.createObjectURL(blob);
-    var a    = document.createElement('a');
-    a.href     = url;
-    a.download = companyName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_') + '_CirculoAzul.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    await html2pdf().set({
+      margin:       [8, 4, 8, 4],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(dashContent).save();
 
   } catch (err) {
     console.error('generarPDF error:', err);
-    if (confirm('No se pudo conectar con el servidor para generar el PDF.\n\n¿Desea usar la impresión del navegador como alternativa?')) {
-      window.print();
-    }
+    alert('Error generando PDF: ' + err.message);
   } finally {
-    if (toast) toast.style.display = 'none';
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Descargar PDF'; }
   }
 }
 

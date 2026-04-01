@@ -1530,8 +1530,8 @@ function initTechPeriodSelector(){
 //  PDF TÉCNICO
 // ══════════════════════════════════════════
 async function generarTechPDF(){
-  var toast = document.getElementById('pdf-toast');
-  if(toast) toast.style.display = 'flex';
+  var btn = document.getElementById('btn-tech-pdf');
+  if(btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
 
   try {
     var dashContent = document.getElementById('tech-dash-content');
@@ -1539,49 +1539,21 @@ async function generarTechPDF(){
 
     var companyName = (dashContent.querySelector('.tech-sec-title') || {}).textContent || 'Análisis Técnico';
     companyName = companyName.replace(/\s+/g,' ').trim().slice(0,40);
-    var reportDate = new Date().toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'});
+    var filename = companyName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_')+'_Tecnico_CirculoAzul.pdf';
 
-    var clone = dashContent.cloneNode(true);
+    await html2pdf().set({
+      margin:       [8, 4, 8, 4],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(dashContent).save();
 
-    // Convertir canvas (gráficas) a imágenes estáticas para Puppeteer
-    var canvases     = dashContent.querySelectorAll('canvas');
-    var cloneCanvases = clone.querySelectorAll('canvas');
-    canvases.forEach(function(cv, i) {
-      try {
-        var img = document.createElement('img');
-        img.src = cv.toDataURL('image/png');
-        img.style.width   = '100%';
-        img.style.height  = 'auto';
-        img.style.display = 'block';
-        if (cloneCanvases[i] && cloneCanvases[i].parentNode) {
-          cloneCanvases[i].parentNode.replaceChild(img, cloneCanvases[i]);
-        }
-      } catch(e) {}
-    });
-
-    var dashboardHTML = clone.innerHTML;
-
-    var resp = await fetch('/api/pdf',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ dashboardHTML: dashboardHTML, companyName: companyName+' — Técnico', reportDate: reportDate })
-    });
-
-    if(!resp.ok){ var err=await resp.json().catch(function(){ return {error:'Error del servidor'}; }); throw new Error(err.error||('HTTP '+resp.status)); }
-
-    var blob = await resp.blob();
-    var url  = URL.createObjectURL(blob);
-    var a    = document.createElement('a');
-    a.href = url;
-    a.download = companyName.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_')+'_Tecnico_CirculoAzul.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
   } catch(err){
     console.error('generarTechPDF error:',err);
-    if(confirm('No se pudo generar el PDF.\n\n¿Usar impresión del navegador?')) window.print();
+    alert('Error generando PDF: ' + err.message);
   } finally {
-    if(toast) toast.style.display='none';
+    if(btn) { btn.disabled = false; btn.textContent = '⬇ PDF Técnico'; }
   }
 }

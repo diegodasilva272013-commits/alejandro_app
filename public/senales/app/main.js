@@ -306,17 +306,42 @@ function verPDFSenales() {
   win.document.close();
 }
 
-// ── Exportar PDF (auto print) ─────────────────────────────────────────────
-function exportarPDFSenales() {
+// ── Exportar PDF (descarga directa con html2pdf) ──────────────────────────
+async function exportarPDFSenales() {
   if (!_datosGlobales) return;
-  const clone = prepararClone();
-  const html = buildPDFHTML(clone, '') + `<script>setTimeout(function(){ window.print(); }, 1200);<\/script>`;
 
-  const win = window.open('', '_blank', 'width=1100,height=850,scrollbars=yes,resizable=yes');
-  if (!win) { alert('Habilitá las ventanas emergentes para este sitio.'); return; }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
+  const btn = document.querySelector('[onclick="exportarPDFSenales()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+
+  try {
+    const dash = document.getElementById('screen-dashboard');
+    if (!dash) throw new Error('No hay dashboard activo');
+
+    // Ocultar sidebar temporalmente
+    const sidebar = dash.querySelector('.dash-sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+
+    const empresa = _empresa || 'Señales';
+    const filename = empresa.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g, '_') + '_Senales_CirculoAzul.pdf';
+
+    await html2pdf().set({
+      margin:       [8, 4, 8, 4],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(dash).save();
+
+    // Restaurar sidebar
+    if (sidebar) sidebar.style.display = '';
+
+  } catch(err) {
+    console.error('exportarPDFSenales error:', err);
+    alert('Error generando PDF: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ PDF'; }
+  }
 }
 
 // ══════════════════════════════════════════════════════════

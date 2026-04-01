@@ -200,26 +200,18 @@ async function exportROImpPDF() {
   try {
     const dash = document.getElementById('dashboard');
     if (!dash) throw new Error('No hay dashboard activo');
-    const clone = dash.cloneNode(true);
-    dash.querySelectorAll('canvas').forEach((cv, i) => {
-      try {
-        const img = document.createElement('img');
-        img.src = cv.toDataURL('image/png');
-        img.style.cssText = 'width:100%;height:auto;display:block;border-radius:4px';
-        clone.querySelectorAll('canvas')[i].replaceWith(img);
-      } catch(e) {}
-    });
-    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map(el => el.outerHTML).join('\n');
     const empresa = _currentEmpresa || 'ROImp';
-    const fullHTML = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${empresa} — ROImp</title>${styles}<style>*,*::before,*::after{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;animation:none!important;transition:none!important}body{background:#05080F!important;margin:0;padding:0}.topbar,.sidebar,.no-print,.ca-particles{display:none!important}.dashboard{display:block!important;padding-top:.5rem!important}</style></head><body>${clone.outerHTML}</body></html>`;
-    const resp = await fetch('/api/pdf360', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fullHTML, companyName: empresa }) });
-    if (!resp.ok) throw new Error('Error del servidor: ' + resp.status);
-    const blob = await resp.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = empresa.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_') + '_ROImp_CirculoAzul.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+    const filename = empresa.replace(/[^a-zA-Z0-9\u00C0-\u024F]/g,'_') + '_ROImp_CirculoAzul.pdf';
+
+    await html2pdf().set({
+      margin:       [8, 4, 8, 4],
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#05080F', scrollY: 0 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(dash).save();
+
   } catch(err) {
     console.error('exportROImpPDF error:', err);
     alert('Error generando PDF: ' + err.message);
