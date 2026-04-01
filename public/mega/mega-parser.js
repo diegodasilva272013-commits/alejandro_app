@@ -119,20 +119,39 @@ const MEGA_ALIAS = {
   'spin-off':'SPIN_OFF','spinoff':'SPIN_OFF','spin off':'SPIN_OFF',
   'recompra agresiva':'RECOMPRA','share buyback':'RECOMPRA',
   'venta de activos':'VENTA_ACTIVOS','asset sale':'VENTA_ACTIVOS',
-  // InvestingPro labels
-  'ingresos': 'INGRESOS',
+  // InvestingPro labels — orden: específicos ANTES que genéricos
   'ingresos netos margen accionistas': 'MARGEN_NETO',
+  'margen de flujo de caja libre sin apalancamiento': 'FCF_SIN_APAL',
+  'margen de flujo de caja libre apalancado': 'FCF_APAL',
   'margen de intereses minoritarios de los resultados': 'MINORITY_INT_PCT',
-  've / flujo de caja libre': 'EV_FCF',
-  'deuda a largo plazo': 'DEUDA_LP',
-  'depreciación y amortización': 'DA',
-  'efectivo neto (ben graham)': 'EFECTIVO_NETO_BG',
+  'rendimiento de flujo de caja libre': 'FCF_YIELD',
+  'fórmula altman z-score': 'ALTMAN',
+  'fórmula beneish m-score': 'BENEISH',
   'beneficio bruto / activos totales': 'GBPTA',
   'propiedad, planta y equipo brutos': 'PPE_BRUTOS',
-  'fórmula beneish m-score': 'BENEISH',
-  'capital total': 'CAPITAL_TOTAL',
+  'previsiones de bpa (investingpro)': 'EPS_PROJ',
+  'previsión de ingresos (investingpro)': 'REVENUE_PROJ',
+  'depreciación y amortización': 'DA',
+  'efectivo neto (ben graham)': 'EFECTIVO_NETO_BG',
+  'efectivo y equivalentes': 'CAJA',
+  'efectivo de las operaciones': 'OFC',
+  'valor de la empresa (ve)': 'EV',
+  'valor de la empresa': 'EV',
+  'deuda neta / ebitda': 'DEUDA_NETA_EBITDA',
+  'deuda a largo plazo': 'DEUDA_LP',
+  'deuda / patrimonio': 'DEUDA_PATRIMONIO',
+  'margen beneficio bruto': 'MARGEN_BRUTO',
+  'margen de gastos de capital': 'MARGEN_CAPEX',
+  'crecimiento básico del bpa': 'BPA_GROWTH',
+  'gastos de capital': 'CAPEX',
+  'acc. en circulación': 'SHARES',
   'rotación de activos': 'ASSET_TURNOVER',
   'relación per (fwd)': 'PER_FWD',
+  'capital total': 'CAPITAL_TOTAL',
+  'ingresos': 'INGRESOS',
+  'ebitda': 'EBITDA',
+  'wacc': 'WACC',
+  'ebit': 'EBIT',
   'empresa': 'EMPRESA',
 };
 
@@ -148,6 +167,10 @@ function megaNormCualit(s) {
 }
 
 // ── PARSER PRINCIPAL ────────────────────────────────────────────────────────
+// Pre-ordenar aliases de mayor a menor longitud para que los más específicos
+// (e.g. 'margen ebitda') se comprueben antes que los genéricos ('ebit').
+const _MEGA_ALIAS_SORTED = Object.entries(MEGA_ALIAS).sort((a, b) => b[0].length - a[0].length);
+
 function megaParse(raw) {
   raw = normalizeToKeyValue(raw);
   const d = {};
@@ -160,11 +183,18 @@ function megaParse(raw) {
     const rawVal = line.slice(idx + 1).trim().replace(/\/\/.*$/, '').trim();
     if (!rawVal) continue;
 
-    // Normalizar clave: buscar alias primero
+    // Normalizar clave: buscar alias (más largo primero → evita conflictos)
     const lowerKey = rawKey.toLowerCase().replace(/\s+/g, ' ');
     let canonKey = null;
-    for (const [alias, canon] of Object.entries(MEGA_ALIAS)) {
-      if (lowerKey.includes(alias)) { canonKey = canon; break; }
+    // Primero intento exacto
+    for (const [alias, canon] of _MEGA_ALIAS_SORTED) {
+      if (lowerKey === alias) { canonKey = canon; break; }
+    }
+    // Segundo: substring (más específico primero gracias al orden por longitud)
+    if (!canonKey) {
+      for (const [alias, canon] of _MEGA_ALIAS_SORTED) {
+        if (lowerKey.includes(alias)) { canonKey = canon; break; }
+      }
     }
     // si no hay alias, usar clave literal uppercased
     if (!canonKey) {

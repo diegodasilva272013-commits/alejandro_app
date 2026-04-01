@@ -194,6 +194,17 @@
           }
 
           var texto = data[cfg.formato] || data.checklist || '';
+
+          // Agregar series 12M automáticamente si el servidor las provee
+          if (data.series12m) {
+            var s12 = data.series12m;
+            var lineas12m = ['\n# ── Series trimestrales (calculadas automáticamente) ──'];
+            Object.keys(s12).forEach(function(k) {
+              if (s12[k]) lineas12m.push(k + ': ' + s12[k]);
+            });
+            texto = texto + lineas12m.join('\n');
+          }
+
           ta.value = texto;
 
           // Disparar evento input para módulos que escuchan cambios

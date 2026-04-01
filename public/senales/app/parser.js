@@ -8,56 +8,56 @@ function ok(v) { return v !== DF && v !== null && v !== undefined; }
 
 const FIELD_MAP = {
   // Rentabilidad
-  roic:                ['roic','return on invested capital'],
+  roic:                ['rendimiento del capital invertido','roic','return on invested capital'],
   wacc:                ['wacc','weighted average cost of capital','costo de capital'],
-  roe:                 ['roe','return on equity','retorno sobre patrimonio'],
-  roa:                 ['roa','return on assets','retorno sobre activos'],
+  roe:                 ['rendimiento de capital','roe','return on equity','retorno sobre patrimonio'],
+  roa:                 ['rendimiento de activos','roa','return on assets','retorno sobre activos'],
 
   // Ingresos y márgenes
   ingresos:            ['ingresos','revenue','ventas','total revenue','ingresos totales'],
   utilidad_bruta:      ['utilidad bruta','gross profit','ganancia bruta'],
   ganancias_netas:     ['ganancias netas','net income','utilidad neta','net profit'],
-  margen_bruto:        ['margen bruto','gross margin','margen bruta'],
+  margen_bruto:        ['margen beneficio bruto','margen bruto','gross margin','margen bruta'],
   margen_neto:         ['margen neto','net margin','net profit margin'],
-  margen_ebit:         ['margen ebit','ebit margin','operating margin','margen operativo'],
   margen_ebitda:       ['margen ebitda','ebitda margin'],
+  margen_ebit:         ['margen ebit','ebit margin','operating margin','margen operativo'],
 
   // EBIT / EBITDA
   ebit:                ['ebit','operating income','resultado operativo'],
   ebitda:              ['ebitda'],
 
   // FCF
-  fcf_neto:            ['fcf','fcf apalancado','free cash flow','fcf neto','levered free cash flow'],
-  fcf_yield:           ['fcf yield','free cash flow yield','rendimiento fcf'],
-  fcf_margen_apal:     ['margen fcf apalancado','levered fcf margin','fcf margin apalancado'],
-  fcf_margen_sin_apal: ['margen fcf sin apal','unlevered fcf margin','fcf margin sin apalancamiento'],
+  fcf_neto:            ['flujo de caja libre neto','fcf','fcf apalancado','free cash flow','fcf neto','levered free cash flow'],
+  fcf_yield:           ['rendimiento de flujo de caja libre','fcf yield','free cash flow yield','rendimiento fcf'],
+  fcf_margen_apal:     ['margen de flujo de caja libre apalancado','margen fcf apalancado','levered fcf margin','fcf margin apalancado'],
+  fcf_margen_sin_apal: ['margen de flujo de caja libre sin apalancamiento','margen fcf sin apal','unlevered fcf margin','fcf margin sin apalancamiento'],
 
   // Valoración
-  per_ltm:             ['per ltm','p/e ltm','price to earnings ltm','pe ltm'],
-  per_fwd:             ['per forward','p/e forward','pe forward','per fwd'],
-  peg:                 ['peg','peg ratio'],
-  ev:                  ['ev','enterprise value','valor empresa'],
-  ev_ebit:             ['ev/ebit','ve/ebit','ev ebit'],
-  ev_ebitda:           ['ev/ebitda','ve/ebitda','ev ebitda'],
-  ev_fcf:              ['ev/fcf','ve/fcf','ev fcf'],
+  per_ltm:             ['per ltm','p/e ltm','price to earnings ltm','pe ltm','per'],
+  per_fwd:             ['relación per (fwd)','per forward','p/e forward','pe forward','per fwd'],
+  peg:                 ['ratio peg','peg','peg ratio'],
+  ev:                  ['valor de la empresa (ve)','valor de la empresa','ev','enterprise value','valor empresa'],
+  ev_ebit:             ['ev/ebit','ve/ebit','ve / ebit','ev ebit'],
+  ev_ebitda:           ['ev/ebitda','ve/ebitda','ve / ebitda','ev ebitda'],
+  ev_fcf:              ['ve / flujo de caja libre','ev/fcf','ve/fcf','ev fcf'],
 
   // Deuda
-  deuda_patrimonio:    ['deuda/patrimonio','d/e','debt to equity','deuda patrimonio'],
-  deuda_neta_ebitda:   ['deuda neta/ebitda','net debt/ebitda','deuda neta ebitda'],
+  deuda_patrimonio:    ['deuda / patrimonio','deuda/patrimonio','d/e','debt to equity','deuda patrimonio'],
+  deuda_neta_ebitda:   ['deuda neta / ebitda','deuda neta/ebitda','net debt/ebitda','deuda neta ebitda'],
   deuda_neta:          ['deuda neta','net debt'],
   deuda_total:         ['deuda total','total debt'],
-  equity:              ['equity','patrimonio','capital','book value'],
+  equity:              ['capital contable','equity','patrimonio neto','patrimonio','capital','book value'],
 
   // CapEx
-  capex:               ['capex','capital expenditure','inversión en activos'],
-  capex_margen:        ['margen capex','capex margin','capex/revenue'],
+  capex:               ['gastos de capital','capex','capital expenditure','inversión en activos'],
+  capex_margen:        ['margen de gastos de capital','margen capex','capex margin','capex/revenue'],
   ppe:                 ['pp&e','ppe','property plant equipment','activos fijos brutos'],
-  benef_bruto_activos: ['benef bruto/activos','gross profit/assets','benef bruto activos'],
+  benef_bruto_activos: ['beneficio bruto / activos totales','benef bruto/activos','gross profit/assets','benef bruto activos'],
 
   // Crecimiento
-  eps_growth:          ['eps growth','crecimiento eps','earnings per share growth'],
-  eps_fwd:             ['eps proyectado','eps forward','eps fwd','eps estimado'],
-  cfo:                 ['cfo','efectivo de operaciones','cash from operations','flujo operativo'],
+  eps_growth:          ['crecimiento básico del bpa','eps growth','crecimiento eps','earnings per share growth'],
+  eps_fwd:             ['previsiones de bpa (investingpro)','previsiones de bpa','eps proyectado','eps forward','eps fwd','eps estimado'],
+  cfo:                 ['efectivo de las operaciones','cfo','efectivo de operaciones','cash from operations','flujo operativo'],
 
   // Cualitativos
   balance_sano:        ['balance sano','balance solido','balance limpio','balance sólido'],
@@ -71,18 +71,18 @@ const FIELD_MAP = {
   // InvestingPro labels
   ingresos_netos_margin: ['ingresos netos margen accionistas'],
   minority_int:          ['margen de intereses minoritarios de los resultados'],
-  ev_fcf:                ['ve / flujo de caja libre', 'ev/fcf', 've/fcf'],
-  deuda_lp:              ['deuda a largo plazo'],
+  deuda_lp:              ['deuda a largo plazo', 'long-term debt'],
   da:                    ['depreciación y amortización', 'depreciation and amortization'],
   efectivo_bg:           ['efectivo neto (ben graham)'],
-  gbpta:                 ['beneficio bruto / activos totales'],
   ppe_brutos:            ['propiedad, planta y equipo brutos'],
   beneish:               ['fórmula beneish m-score', 'beneish m-score'],
+  altman_z:              ['fórmula altman z-score', 'altman z', 'z-score'],
+  piotroski_score:       ['puntuación piotroski', 'piotroski f-score', 'piotroski score'],
   capital_total:         ['capital total'],
   asset_turnover:        ['rotación de activos', 'asset turnover'],
-  relacion_per_fwd:      ['relación per (fwd)'],
   efectivo_equiv:        ['efectivo y equivalentes', 'cash and equivalents'],
   acciones_circ:         ['acc. en circulación', 'acciones en circulación'],
+  revenue_proj:          ['previsión de ingresos (investingpro)', 'previsión de ingresos', 'revenue forecast'],
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -111,9 +111,22 @@ function normalizarCualitativo(str) {
 const CUALITATIVOS = ['balance_sano','salud_debil','ventaja_comp','sector_deterioro',
                       're_rating_ev','spin_off','recompra','venta_activos'];
 
+// Pre-ordenar entradas: primero exactas por longitud de alias desc → evita
+// que 'ebit' capture 'Margen EBITDA', 'ingresos' capture 'Ingresos netos…', etc.
+const _FIELD_ENTRIES_SORTED = Object.entries(FIELD_MAP)
+  .map(([k, v]) => [k, v.slice().sort((a, b) => b.length - a.length)])
+  .sort((a, b) => (b[1][0]?.length ?? 0) - (a[1][0]?.length ?? 0));
+
 function buscarCampo(linea) {
   const l = linea.toLowerCase().trim();
-  for (const [campo, aliases] of Object.entries(FIELD_MAP)) {
+  // Primero: coincidencia exacta (resuelve ambigüedad sin importar orden)
+  for (const [campo, aliases] of _FIELD_ENTRIES_SORTED) {
+    for (const alias of aliases) {
+      if (l === alias) return campo;
+    }
+  }
+  // Segundo: substring (alias más largos primero gracias al orden pre-calculado)
+  for (const [campo, aliases] of _FIELD_ENTRIES_SORTED) {
     for (const alias of aliases) {
       if (l.includes(alias)) return campo;
     }

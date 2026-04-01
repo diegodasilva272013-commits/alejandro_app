@@ -17,6 +17,7 @@
     "express-basic-auth": "^1.2.1",
     "express-rate-limit": "^8.3.1",
     "openai": "^6.32.0",
-    "puppeteer": "^22.15.0"
+    "puppeteer": "^22.15.0",
+    "yahoo-finance2": "^3.13.2"
   }
 }

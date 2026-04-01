@@ -45,9 +45,10 @@ function runManual() {
     alert("No se detectó EV/EBIT en el texto. Asegurate de incluir ese dato.");
     return;
   }
-  // Intentar extraer nombre de empresa del texto
+  // Leer nombre empresa del campo (tiene prioridad), luego intentar extraer del texto
+  const campoEmpresa = ((document.getElementById('inp-empresa')||{}).value||'').trim();
   const empresaMatch = raw.match(/(?:empresa|company|ticker|accion|acción)[:\s]+([\w\s\.]+)/i);
-  const empresa = empresaMatch ? empresaMatch[1].trim().split("\n")[0] : "Empresa";
+  const empresa = campoEmpresa || (empresaMatch ? empresaMatch[1].trim().split("\n")[0] : "Empresa");
   _currentRawText = raw;
   runAnalysis(data, empresa);
 }

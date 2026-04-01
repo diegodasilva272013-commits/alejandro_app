@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Empresas Extraordinarias — Círculo Azul Finanzas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#05080F;color:#fff;font-family:'Inter',sans-serif;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#1A56C4;border-radius:2px}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:54px;background:rgba(5,8,15,.97);
+  border-bottom:1px solid rgba(90,155,255,.2);display:flex;align-items:center;
+  padding:0 28px;gap:16px;z-index:999}
+.back-btn{color:#8FA8C8;font-size:12px;text-decoration:none;border:1px solid rgba(90,155,255,.2);
+  padding:5px 12px;border-radius:5px;transition:.2s}
+.back-btn:hover{color:#fff;border-color:rgba(90,155,255,.5)}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700}
+.topbar-tag{font-size:10px;font-weight:600;letter-spacing:.12em;color:#5A9BFF;
+  background:rgba(90,155,255,.1);border:1px solid rgba(90,155,255,.25);
+  padding:3px 9px;border-radius:20px}
+
+/* MAIN */
+.wrap{padding:74px 28px 60px;max-width:1440px;margin:0 auto}
+
+/* SEARCH */
+.search-area{text-align:center;padding:48px 0 40px}
+.search-area h1{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;margin-bottom:8px}
+.search-area h1 span{color:#5A9BFF}
+.search-area p{color:#8FA8C8;font-size:14px;margin-bottom:28px}
+.search-row{display:flex;gap:8px;max-width:460px;margin:0 auto}
+.search-row input{flex:1;background:#0D1627;border:1px solid rgba(90,155,255,.3);border-radius:8px;
+  padding:12px 16px;color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none}
+.search-row input:focus{border-color:#5A9BFF}
+.search-row button{background:linear-gradient(135deg,#1A56C4,#1A4FAA);border:none;border-radius:8px;
+  padding:12px 20px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.search-row button:disabled{opacity:.5;cursor:not-allowed}
+#errMsg{color:#E74C3C;font-size:13px;margin-top:12px;display:none}
+
+/* SPINNER */
+#spinner{display:none;flex-direction:column;align-items:center;gap:16px;padding:48px 0}
+.spin{width:44px;height:44px;border:3px solid rgba(90,155,255,.15);border-top-color:#5A9BFF;
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-msg{color:#8FA8C8;font-size:13px}
+
+/* PROTOCOL CARD */
+#protocolCard{display:none;background:#0D1627;border:1px solid rgba(90,155,255,.2);
+  border-radius:12px;padding:22px 26px;margin-bottom:24px}
+.pc-row{display:flex;align-items:center;gap:32px;flex-wrap:wrap}
+.pc-left{flex:1;min-width:200px}
+.pc-ticker{font-family:'Space Mono',monospace;font-size:12px;color:#5A9BFF;letter-spacing:.1em;margin-bottom:4px}
+.pc-company{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;margin-bottom:14px}
+.pc-counts{display:flex;gap:20px;flex-wrap:wrap}
+.pc-count{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.g{color:#2ECC71}.g .dot{background:#2ECC71}
+.a{color:#F39C12}.a .dot{background:#F39C12}
+.r{color:#E74C3C}.r .dot{background:#E74C3C}
+.pc-right{display:flex;flex-direction:column;align-items:center;gap:10px}
+.gauge{position:relative;width:100px;height:100px;display:flex;align-items:center;justify-content:center}
+.gauge svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.gauge-num{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;position:relative}
+.gauge-lbl{font-size:10px;color:#8FA8C8;letter-spacing:.1em;text-transform:uppercase}
+.badge{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.06em;text-align:center}
+.badge-ext{background:rgba(26,138,74,.2);color:#2ECC71;border:1px solid rgba(46,204,113,.3)}
+.badge-seg{background:rgba(214,137,16,.2);color:#F39C12;border:1px solid rgba(243,156,18,.3)}
+.badge-des{background:rgba(192,57,43,.2);color:#E74C3C;border:1px solid rgba(231,76,60,.3)}
+
+/* TABLE SECTION */
+#tableSection{display:none;margin-bottom:24px}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.section-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700}
+.section-sub{font-size:12px;color:#6A829E}
+.legend{display:flex;gap:14px;align-items:center}
+.legend span{font-size:11px;color:#8FA8C8;display:flex;align-items:center;gap:5px}
+.ld{width:9px;height:9px;border-radius:2px;display:inline-block}
+.ld-g{background:#2ECC71}.ld-a{background:#F39C12}.ld-r{background:#E74C3C}.ld-n{background:#4A5568}
+
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid rgba(90,155,255,.1)}
+table{border-collapse:collapse;width:100%;min-width:700px;white-space:nowrap}
+thead th{background:#142035;color:#8FA8C8;font-size:11px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;padding:9px 12px;border-bottom:1px solid rgba(90,155,255,.15);
+  text-align:right;position:sticky;top:0}
+thead th:first-child{text-align:left;min-width:185px}
+thead th:nth-child(2){width:26px;text-align:center}
+tbody td{padding:8px 12px;font-size:13px;border-bottom:1px solid rgba(90,155,255,.05);text-align:right}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(90,155,255,.04)}
+td.nm{text-align:left;color:#C4D4EA;font-weight:500}
+td.st{text-align:center}
+td.cg{background:rgba(26,138,74,.13);color:#2ECC71;font-weight:500}
+td.ca{background:rgba(214,137,16,.13);color:#F39C12;font-weight:500}
+td.cr{background:rgba(192,57,43,.13);color:#E74C3C;font-weight:500}
+td.cn{color:#4A5568;font-size:11px}
+.sd{width:9px;height:9px;border-radius:50%;display:inline-block}
+.sd-g{background:#2ECC71;box-shadow:0 0 5px rgba(46,204,113,.5)}
+.sd-a{background:#F39C12;box-shadow:0 0 5px rgba(243,156,18,.4)}
+.sd-r{background:#E74C3C;box-shadow:0 0 5px rgba(231,76,60,.4)}
+.sd-n{background:#4A5568}
+
+/* NARRATIVE */
+#narrativeCard{display:none;background:#0D1627;border:1px solid rgba(90,155,255,.15);
+  border-radius:12px;padding:26px 30px}
+.narrative h2{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;
+  color:#fff;margin:22px 0 8px}
+.narrative h2:first-child{margin-top:0}
+.narrative p{color:#C4D4EA;line-height:1.75;font-size:14px;margin-bottom:10px}
+.narrative strong{color:#fff;font-weight:600}
+.narrative ul{padding-left:18px;margin-bottom:10px}
+.narrative li{color:#C4D4EA;font-size:14px;line-height:1.7;margin-bottom:4px}
+.nar-spin{display:flex;align-items:center;gap:10px;color:#8FA8C8;font-size:13px;padding:16px 0}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="back-btn">← Inicio</a>
+  <div class="topbar-title">Empresas Extraordinarias</div>
+  <div class="topbar-tag">PROTOCOLO IA</div>
+</header>
+
+<div class="wrap">
+
+  <div class="search-area">
+    <h1>¿Es una empresa <span>extraordinaria</span>?</h1>
+    <p>Ingresá el ticker y la IA evalúa los 20 indicadores del protocolo con 12 meses de datos.</p>
+    <div class="search-row">
+      <input id="inp" type="text" placeholder="Ticker (ej: AAPL, TSLA, MSFT...)" autocomplete="off" spellcheck="false"/>
+      <button id="btn" onclick="run()">Analizar →</button>
+    </div>
+    <div id="errMsg"></div>
+  </div>
+
+  <div id="spinner">
+    <div class="spin"></div>
+    <div class="spin-msg" id="spinMsg">Buscando datos financieros...</div>
+  </div>
+
+  <!-- PROTOCOL -->
+  <div id="protocolCard">
+    <div class="pc-row">
+      <div class="pc-left">
+        <div class="pc-ticker" id="pcTicker"></div>
+        <div class="pc-company" id="pcCompany"></div>
+        <div class="pc-counts">
+          <div class="pc-count g"><span class="dot"></span><span id="cntG">0</span> verde</div>
+          <div class="pc-count a"><span class="dot"></span><span id="cntA">0</span> amarillo</div>
+          <div class="pc-count r"><span class="dot"></span><span id="cntR">0</span> rojo</div>
+        </div>
+      </div>
+      <div class="pc-right">
+        <div class="gauge">
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(90,155,255,.1)" stroke-width="8"/>
+            <circle id="gArc" cx="50" cy="50" r="42" fill="none" stroke="#2ECC71" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264" style="transition:stroke-dashoffset .8s"/>
+          </svg>
+          <div class="gauge-num" id="gNum">0</div>
+        </div>
+        <div class="gauge-lbl">Score de Calidad</div>
+        <div class="badge" id="gBadge">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div id="tableSection">
+    <div class="section-hdr">
+      <div>
+        <div class="section-title">Tabla de Ratios Financieros</div>
+        <div class="section-sub" id="tblSub">20 indicadores · 12 meses</div>
+      </div>
+      <div class="legend">
+        <span><i class="ld ld-g"></i>Verde</span>
+        <span><i class="ld ld-a"></i>Amarillo</span>
+        <span><i class="ld ld-r"></i>Rojo</span>
+        <span><i class="ld ld-n"></i>N/D</span>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead id="tHead"></thead>
+        <tbody id="tBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NARRATIVE -->
+  <div id="narrativeCard">
+    <div class="section-title" style="margin-bottom:18px">Análisis Narrativo</div>
+    <div class="narrative" id="narDiv"></div>
+  </div>
+
+</div>
+
+<script>
+const THRESHOLDS = {
+  roic:      { g: v=>v>=15,  a: v=>v>=10&&v<15  },
+  roa:       { g: v=>v>=10,  a: v=>v>=7&&v<10   },
+  roe:       { g: v=>v>=15,  a: v=>v>=10&&v<15  },
+  croic:     { g: v=>v>=10,  a: v=>v>=7&&v<10   },
+  per:       { g: v=>v<=20,  a: v=>v>20&&v<=30  },
+  fcfYield:  { g: v=>v>=5,   a: v=>v>=3&&v<5    },
+  ccr:       { g: v=>v>=1,   a: v=>v>=0.8&&v<1  },
+  ocfNi:     { g: v=>v>=1,   a: v=>v>=0.8&&v<1  },
+  fcfNi:     { g: v=>v>=1,   a: v=>v>=0.8&&v<1  },
+  accrual:   { g: v=>v<=-5,  a: v=>v>-5&&v<=0   },
+  assetTurn: { g: v=>v>=0.5, a: v=>v>=0.3&&v<0.5},
+  gpAssets:  { g: v=>v>=45,  a: v=>v>=30&&v<45  },
+  ebitMargin:{ g: v=>v>=15,  a: v=>v>=10&&v<15  },
+  roicWacc:  { g: v=>v>0,    a: v=>v>-3&&v<=0   },
+  fcfCagr:   { g: v=>v>=15,  a: v=>v>=10&&v<15  },
+  deudaFcf:  { g: v=>v<=3,   a: v=>v>3&&v<=5    },
+  altmanZ:   { g: v=>v>=3,   a: v=>v>=1.8&&v<3  },
+  piotroski: { g: v=>v>=7,   a: v=>v>=5&&v<7    },
+  bookBill:  { g: v=>v>=1,   a: v=>v>=0.9&&v<1  },
+  backlog:   { text:true, g: v=>typeof v==='string'&&v.toLowerCase().startsWith('crec') }
+};
+
+function status(key, val) {
+  if (val===null||val===undefined||val===''||val==='N/D') return 'n';
+  const t = THRESHOLDS[key];
+  if (!t) return 'n';
+  if (t.text) return t.g(val)?'g':'r';
+  const n = parseFloat(val);
+  if (isNaN(n)) return 'n';
+  if (t.g(n)) return 'g';
+  if (t.a && t.a(n)) return 'a';
+  return 'r';
+}
+
+function fmt(val, unit) {
+  if (val===null||val===undefined||val===''||val==='N/D') return 'N/D';
+  if (unit==='txt') return String(val);
+  const n = parseFloat(val);
+  if (isNaN(n)) return String(val);
+  if (unit==='%')  return n.toFixed(1)+'%';
+  if (unit==='/9') return n.toFixed(0)+'/9';
+  if (unit==='x')  return n.toFixed(2)+'x';
+  return n.toFixed(2);
+}
+
+function renderTable(d) {
+  const months = d.months || d.quarters || [];
+  document.getElementById('tblSub').textContent =
+    '20 indicadores · '+(months[0]||'')+' → '+(months[months.length-1]||'');
+
+  // Header
+  document.getElementById('tHead').innerHTML =
+    '<tr><th style="text-align:left">Indicador</th><th></th>'+
+    months.map(m=>'<th>'+m+'</th>').join('')+'</tr>';
+
+  // Body
+  let html = '';
+  (d.ratios||[]).forEach(r=>{
+    const vals = r.values||[];
+    const last = [...vals].reverse().find(v=>v!==null&&v!==undefined&&v!==''&&v!=='N/D');
+    const rs = status(r.key, last);
+    const dotCls = {g:'sd-g',a:'sd-a',r:'sd-r',n:'sd-n'}[rs]||'sd-n';
+    const cells = months.map((_,i)=>{
+      const v = vals[i];
+      const s = status(r.key, v);
+      const isEmpty = v===null||v===undefined||v===''||v==='N/D';
+      const cls = isEmpty?'cn':{g:'cg',a:'ca',r:'cr',n:'cn'}[s]||'cn';
+      return '<td class="'+cls+'">'+fmt(v,r.unit)+'</td>';
+    }).join('');
+    html += '<tr><td class="nm">'+r.name+'</td><td class="st"><span class="sd '+dotCls+'"></span></td>'+cells+'</tr>';
+  });
+  document.getElementById('tBody').innerHTML = html;
+}
+
+function renderProtocol(d) {
+  let g=0,a=0,r=0;
+  (d.ratios||[]).forEach(ratio=>{
+    const vals = ratio.values||[];
+    const last = [...vals].reverse().find(v=>v!==null&&v!==undefined&&v!==''&&v!=='N/D');
+    const s = status(ratio.key, last);
+    if(s==='g') g++; else if(s==='a') a++; else if(s==='r') r++;
+  });
+  const total = g+a+r;
+  const score = total>0 ? Math.round((g/total)*100) : 0;
+
+  document.getElementById('pcTicker').textContent = d.ticker||'';
+  document.getElementById('pcCompany').textContent = d.company||d.ticker||'';
+  document.getElementById('cntG').textContent = g;
+  document.getElementById('cntA').textContent = a;
+  document.getElementById('cntR').textContent = r;
+  document.getElementById('gNum').textContent = score;
+
+  const arc = document.getElementById('gArc');
+  arc.style.strokeDashoffset = 264 - (score/100)*264;
+  arc.style.stroke = score>=75?'#2ECC71':score>=50?'#F39C12':'#E74C3C';
+
+  const badge = document.getElementById('gBadge');
+  if(g>=15){ badge.textContent='⭐ Empresa Extraordinaria'; badge.className='badge badge-ext'; }
+  else if(g>=10){ badge.textContent='👁 En Seguimiento'; badge.className='badge badge-seg'; }
+  else { badge.textContent='✕ Descartar'; badge.className='badge badge-des'; }
+}
+
+function renderNarrative(text) {
+  const html = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^### (.+)$/gm,'<h2 style="font-size:15px">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?(?=<\/li>)<\/li>)/g,'$1')
+    .split('\n').map(l=>{
+      const t=l.trim();
+      if(!t) return '';
+      if(/^<[hul]/.test(t)) return t;
+      return '<p>'+t+'</p>';
+    }).join('');
+  document.getElementById('narDiv').innerHTML = html;
+}
+
+async function run() {
+  const ticker = document.getElementById('inp').value.trim().toUpperCase();
+  if (!ticker) return;
+
+  // Reset
+  document.getElementById('errMsg').style.display='none';
+  document.getElementById('btn').disabled=true;
+  document.getElementById('protocolCard').style.display='none';
+  document.getElementById('tableSection').style.display='none';
+  document.getElementById('narrativeCard').style.display='none';
+  document.getElementById('spinner').style.display='flex';
+  document.getElementById('spinMsg').textContent='Buscando datos financieros de '+ticker+'...';
+
+  try {
+    // Ratios
+    const r1 = await fetch('/api/emp-ext/ratios',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ticker, company:ticker})
+    });
+    const d1 = await r1.json();
+    if(!r1.ok) throw new Error(d1.error||'Error en ratios');
+
+    // Render table & protocol — HIDE spinner FIRST
+    document.getElementById('spinner').style.display='none';
+
+    renderTable(d1);
+    renderProtocol(d1);
+
+    document.getElementById('protocolCard').style.display='block';
+    document.getElementById('tableSection').style.display='block';
+    document.getElementById('narrativeCard').style.display='block';
+    document.getElementById('narDiv').innerHTML='<div class="nar-spin"><div class="spin" style="width:22px;height:22px;border-width:2px"></div> Generando análisis...</div>';
+
+    // Narrative
+    const r2 = await fetch('/api/emp-ext/analisis',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ticker:d1.ticker, company:d1.company})
+    });
+    const d2 = await r2.json();
+    if(!r2.ok) throw new Error(d2.error||'Error en análisis');
+
+    renderNarrative(d2.analisis);
+
+  } catch(err) {
+    document.getElementById('spinner').style.display='none';
+    const e = document.getElementById('errMsg');
+    e.textContent = 'Error: '+err.message;
+    e.style.display='block';
+  } finally {
+    document.getElementById('btn').disabled=false;
+  }
+}
+
+document.getElementById('inp').addEventListener('keydown', e=>{ if(e.key==='Enter') run(); });
+</script>
+</body>
+</html>

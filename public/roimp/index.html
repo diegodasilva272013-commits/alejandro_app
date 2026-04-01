@@ -568,6 +568,7 @@
     <div class="mp-title">📋 Pegá los datos financieros</div>
     <div class="mp-sub">Copiá cualquier texto con los datos (de tu informe, Excel, Word o similar) y pegalo acá.<br>El sistema detecta los valores automáticamente sin importar el formato.</div>
     <div id="ca-search-roimp"></div>
+    <input type="text" id="inp-empresa" placeholder="Nombre de la empresa (ej: Duolingo Inc.)" style="width:100%;padding:.6rem .9rem;background:rgba(255,255,255,.05);border:1px solid rgba(26,86,196,.25);border-radius:8px;color:#D8E6F5;font-size:.85rem;font-family:inherit;margin-bottom:.65rem;outline:none;box-sizing:border-box">
     <textarea id="paste-area" class="paste-area"
       placeholder="Pegá aquí el texto con los datos financieros. Ejemplos de formatos aceptados:
 
@@ -806,11 +807,11 @@ O hacé clic en 'Cargar ejemplo' para ver el formato."></textarea>
   </div>
 </div>
 
-<script src="parser.js"></script>
+<script src="parser.js?v=20260326"></script>
 <script src="calculator.js"></script>
 <script src="charts.js"></script>
 <script src="renderer.js"></script>
-<script src="main.js"></script>
+<script src="main.js?v=20260326"></script>
 <script src="/js/empresa-search.js"></script>
 <script>
 EmpresaSearch.init({ wrapperId: 'ca-search-roimp', textareaId: 'paste-area', formato: 'roimp' });

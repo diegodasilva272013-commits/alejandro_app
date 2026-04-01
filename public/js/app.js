@@ -84,16 +84,145 @@ function loadExample(){ document.getElementById('paste-area').value = EXAMPLE; s
 // ══════════════════════════════════════════
 function parseData(raw){
   const d = {};
-  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#'));
-  for(const line of lines){
-    const idx = line.indexOf(':');
-    if(idx<0) continue;
-    const key = line.slice(0,idx).trim().toUpperCase().replace(/[^A-Z0-9_&]/g,'_');
-    const val = line.slice(idx+1).trim();
-    if(val.includes(',')){ d[key] = val.split(',').map(v=>parseFloat(v.trim())).filter(v=>!isNaN(v)); }
-    else if(!isNaN(parseFloat(val)) && val !== ''){ d[key] = parseFloat(val); }
-    else { d[key] = val; }
+
+  // ── Alias: label InvestingPro (Spanish) → clave interna UPPERCASE ─────────
+  // Orden: específicos PRIMERO (alias más largos), genéricos al final
+  const ALIAS = [
+    ['ingresos netos margen accionistas',               'MARGEN_NETO'],
+    ['margen de intereses minoritarios de los resultados','MINORITY_INT'],
+    ['margen de flujo de caja libre sin apalancamiento','FCF_SIN_APAL_PCT'],
+    ['margen de flujo de caja libre apalancado',        'FCF_APAL_PCT'],
+    ['rendimiento de flujo de caja libre',              'FCF_YIELD'],
+    ['flujo de caja libre neto',                        'FCF'],
+    ['ve / flujo de caja libre',                        'EV_FCF'],
+    ['fórmula altman z-score',                          'ALTMAN'],
+    ['fórmula beneish m-score',                         'BENEISH'],
+    ['beneficio bruto / activos totales',               'UB_AT'],
+    ['propiedad, planta y equipo brutos',               'PPE'],
+    ['previsiones de bpa (investingpro)',                'EPS_PROJ'],
+    ['previsión de ingresos (investingpro)',             'REVENUE_PROJ'],
+    ['crecimiento básico del bpa',                      'BPA_GROWTH'],
+    ['valor de la empresa (ve)',                        'EV'],
+    ['valor de la empresa',                             'EV'],
+    ['depreciación y amortización',                     'DA'],
+    ['efectivo neto (ben graham)',                      'EFECTIVO_BG'],
+    ['efectivo de las operaciones',                     'OFC'],
+    ['efectivo y equivalentes',                         'CAJA'],
+    ['ratio de cobertura de intereses',                 'GASTO_INTERESES_ICR'],
+    ['ratio de solvencia',                              'CRATIO'],
+    ['rendimiento del capital invertido',               'ROIC'],
+    ['rendimiento de capital',                          'ROE'],
+    ['rendimiento de activos',                          'ROA'],
+    ['gastos de capital',                               'CAPEX'],
+    ['margen de gastos de capital',                     'MARGEN_CAPEX'],
+    ['margen beneficio bruto',                          'MARGEN_BRUTO'],
+    ['margen ebitda',                                   'MARGEN_EBITDA'],
+    ['margen ebit',                                     'MARGEN_EBIT'],
+    ['deuda neta / ebitda',                             'DEUDA_NETA_EBITDA'],
+    ['deuda a largo plazo',                             'DEUDA_LP'],
+    ['deuda / patrimonio',                              'DEUDA_PATRIMONIO'],
+    ['puntuación piotroski',                            'PIOTROSKI'],
+    ['relación per (fwd)',                              'PER_FWD'],
+    ['acc. en circulación',                             'SHARES'],
+    ['utilidad bruta',                                  'UTILIDAD_BRUTA'],
+    ['ganancias netas',                                 'GANANCIAS_NETAS'],
+    ['margen neto',                                     'MARGEN_NETO'],
+    ['prueba ácida',                                    'QUICK_RATIO'],
+    ['deuda neta',                                      'DEUDA_NETA'],
+    ['deuda total',                                     'DEUDA_TOTAL'],
+    ['capital contable',                                'EQUITY'],
+    ['capital total',                                   'CAPITAL_TOTAL'],
+    ['rotación de activos',                             'ASSET_TURNOVER'],
+    ['ratio peg',                                       'PEG'],
+    ['ingresos',                                        'INGRESOS'],
+    ['ebitda',                                          'EBITDA'],
+    ['wacc',                                            'WACC'],
+    ['ebit',                                            'EBIT'],
+    ['per',                                             'PER'],
+    ['ve/ebitda',                                       'EV_EBITDA'],
+    ['ve/ebit',                                         'EV_EBIT'],
+  ];
+
+  // Keys que calcIndicators() lee con arr() → un valor escalar se envuelve en []
+  const ARR_KEYS = new Set(['INGRESOS','UTILIDAD_BRUTA','GANANCIAS_NETAS','EBIT','EBITDA',
+                             'OFC','CAPEX','FCF','BPA','EQUITY','ROIC']);
+
+  // ── Paso 1: normalizar formato InvestingPro (etiqueta\nvalor) → "label: valor"
+  const rawLines = raw.split('\n').map(l=>l.trim()).filter(l=>l && !l.startsWith('#') && !l.startsWith('//'));
+  const normalised = [];
+  let i = 0;
+  while(i < rawLines.length){
+    const line = rawLines[i];
+    if(line.includes(':')){
+      normalised.push(line);
+      i++;
+    } else {
+      const next = rawLines[i+1] || '';
+      // Si la siguiente línea parece un valor numérico (empieza con dígito, -, $)
+      if(next && !next.includes(':') && /^[-–]?[\d$]/.test(next)){
+        normalised.push(line + ': ' + next);
+        i += 2;
+      } else {
+        normalised.push(line);
+        i++;
+      }
+    }
   }
+
+  // ── Paso 2: parsear cada línea normalizada
+  for(const line of normalised){
+    const idx = line.indexOf(':');
+    if(idx < 0) continue;
+    const rawKey = line.slice(0, idx).trim();
+    const val    = line.slice(idx+1).trim();
+    if(!val) continue;
+
+    // Resolver clave canónica via alias (exacto primero, luego substring)
+    const lk = rawKey.toLowerCase().replace(/\s+/g,' ');
+    let canonKey = null;
+    for(const entry of ALIAS){
+      if(!Array.isArray(entry)) continue;
+      if(lk === entry[0]){ canonKey = entry[1]; break; }
+    }
+    if(!canonKey){
+      for(const entry of ALIAS){
+        if(!Array.isArray(entry)) continue;
+        if(lk.includes(entry[0])){ canonKey = entry[1]; break; }
+      }
+    }
+    if(!canonKey){
+      canonKey = rawKey.toUpperCase().replace(/[^A-Z0-9_&]/g,'_');
+    }
+
+    // Parse valor
+    if(val.includes(',')){
+      const arr2 = val.split(',').map(v=>parseFloat(v.trim())).filter(v=>!isNaN(v));
+      if(arr2.length > 0){ d[canonKey] = arr2; continue; }
+    }
+
+    // Escalar numérico con soporte B/M/K
+    let numStr = val.replace(/[$,\s]/g,'').replace(/–/g,'-');
+    let mult = 1;
+    if(/[Bb]$/.test(numStr)){ mult=1000; numStr=numStr.slice(0,-1); }
+    else if(/[Mm]$/.test(numStr)){ mult=1; numStr=numStr.slice(0,-1); }
+    else if(/[Kk]$/.test(numStr)){ mult=0.001; numStr=numStr.slice(0,-1); }
+    numStr = numStr.replace(/[x%]$/i,'');
+    const n = parseFloat(numStr);
+    if(!isNaN(n)){
+      // Envolver en [] si calcIndicators espera arr() para este key
+      d[canonKey] = ARR_KEYS.has(canonKey) ? [n*mult] : n*mult;
+    } else {
+      d[canonKey] = val;
+    }
+  }
+
+  // ── Paso 3: compat — mapear ICR pegado como "Ratio de Cobertura de Intereses: 43.1x"
+  // calcIndicators calcula ICR como ebit25/gi, pero si el usuario pegó el valor
+  // directo, lo exponemos bajo ICR para que el indicador #21 lo muestre
+  if(d['GASTO_INTERESES_ICR'] !== undefined && d['ICR'] === undefined){
+    d['ICR'] = d['GASTO_INTERESES_ICR'];
+  }
+
   return d;
 }
 
@@ -161,8 +290,8 @@ function calcIndicators(d){
   const anios = ['2021','2022','2023','2024','2025'];
 
   // ── CÁLCULOS ──
-  const mgBruto25 = (ub25&&ing25) ? (ub25/ing25)*100 : null;
-  const mgNeto25  = (gn25&&ing25) ? (gn25/ing25)*100 : null;
+  const mgBruto25 = (ub25&&ing25) ? (ub25/ing25)*100 : num(d,'MARGEN_BRUTO');
+  const mgNeto25  = (gn25&&ing25) ? (gn25/ing25)*100 : num(d,'MARGEN_NETO');
   const rndFCF    = (fcf25&&ev)   ? (fcf25/ev)*100   : null;
   const mgFCF = fcf.map((f,i)=>ing[i]?(f/ing[i])*100:null);
   const mgFCF3 = mgFCF.slice(-3);
@@ -170,26 +299,26 @@ function calcIndicators(d){
   const mgFCFGood= mgFCF3.every(v=>v!==null&&v>=10);
   const mgFCFSignal = mgFCF3.every(v=>v!==null&&v>=10&&v<=25)?'🟢':mgFCF3.some(v=>v!==null&&v<10)?'🔴':'🟡';
 
-  const vefcf   = (ev&&fcf25) ? ev/fcf25 : null;
-  const fcfYield= vefcf ? (1/vefcf)*100 : null;
+  const vefcf   = (ev&&fcf25) ? ev/fcf25 : num(d,'EV_FCF');
+  const fcfYield= vefcf ? (1/vefcf)*100 : num(d,'FCF_YIELD');
 
-  const mgEBIT25 = (ebit25&&ing25) ? (ebit25/ing25)*100 : null;
-  const mgEBITDA25=(ebitda25&&ing25)?(ebitda25/ing25)*100:null;
+  const mgEBIT25 = (ebit25&&ing25) ? (ebit25/ing25)*100 : num(d,'MARGEN_EBIT');
+  const mgEBITDA25=(ebitda25&&ing25)?(ebitda25/ing25)*100 : num(d,'MARGEN_EBITDA');
 
-  const evEBIT  = (ev&&ebit25) ? ev/ebit25 : null;
+  const evEBIT  = (ev&&ebit25) ? ev/ebit25 : num(d,'EV_EBIT');
   const roImp   = evEBIT ? (1/evEBIT)*100 : null;
 
-  const liqCte  = (ac&&pc)  ? ac/pc  : null;
-  const liqAcida= (ac&&inv&&pc) ? (ac-inv)/pc : null;
-  const icr     = (ebit25&&gi) ? ebit25/gi : null;
-  const dPat    = (dt&&eq25) ? (dt/eq25)*100 : null;
-  const dn      = (dt!==null&&caja!==null) ? dt-caja : null;
-  const dnEBITDA= (dn!==null&&ebitda25) ? dn/ebitda25 : null;
+  const liqCte  = (ac&&pc)  ? ac/pc  : num(d,'CRATIO');
+  const liqAcida= (ac&&inv&&pc) ? (ac-inv)/pc : num(d,'QUICK_RATIO');
+  const icr     = (ebit25&&gi) ? ebit25/gi : num(d,'ICR',num(d,'GASTO_INTERESES_ICR'));
+  const dPat    = (dt&&eq25) ? (dt/eq25)*100 : (num(d,'DEUDA_PATRIMONIO')!==null ? num(d,'DEUDA_PATRIMONIO') : null);
+  const dn      = (dt!==null&&caja!==null) ? dt-caja : num(d,'DEUDA_NETA');
+  const dnEBITDA= (dn!==null&&ebitda25) ? dn/ebitda25 : num(d,'DEUDA_NETA_EBITDA');
 
-  const mgFCFSA = (fcfSA&&ing25) ? (fcfSA/ing25)*100 : null;
-  const mgFCFA  = (fcfA&&ing25)  ? (fcfA/ing25)*100  : null;
+  const mgFCFSA = (fcfSA&&ing25) ? (fcfSA/ing25)*100 : num(d,'FCF_SIN_APAL_PCT');
+  const mgFCFA  = (fcfA&&ing25)  ? (fcfA/ing25)*100  : num(d,'FCF_APAL_PCT');
 
-  const ubAt    = (ub25&&at) ? (ub25/at)*100 : null;
+  const ubAt    = (ub25&&at) ? (ub25/at)*100 : num(d,'UB_AT');
   const ppeIng  = (ppe&&ing25) ? (ppe/ing25)*100 : null;
 
   // BPA CAGR
@@ -316,7 +445,49 @@ function calcIndicators(d){
     mgFCFSA, mgFCFA, ubAt, ppeIng, bpaCagr, ebitEBITDA, ccr,
     croic, ofcNI, fcfNI, niFCF, accrual,
     spread, spreadROImp, phrases, inds, cntGreen, cntAmber, cntRed,
-    moneda, alertTxt, anios, fcfSA, fcfA, mgCap, altman, piotr, htInds};
+    moneda, alertTxt, anios, fcfSA, fcfA, mgCap, altman, piotr, htInds,
+    series12m: (function(){
+      function zip(a,b,fn){
+        if(!Array.isArray(a)||!Array.isArray(b)) return null;
+        var len=Math.min(a.length,b.length), out=[];
+        for(var i=0;i<len;i++)
+          out.push((a[i]!=null&&b[i]!=null&&b[i]!==0)?fn(a[i],b[i]):null);
+        return out.some(function(v){return v!==null;})?out:null;
+      }
+      var gn12   = Array.isArray(d['GANANCIAS_NETAS_12M'])  ? d['GANANCIAS_NETAS_12M']  : null;
+      var at12   = Array.isArray(d['ACTIVOS_TOTALES_12M'])  ? d['ACTIVOS_TOTALES_12M']  : null;
+      var ing12  = Array.isArray(d['INGRESOS_12M'])          ? d['INGRESOS_12M']          : null;
+      var ebit12 = Array.isArray(d['EBIT_12M'])              ? d['EBIT_12M']              : null;
+      var pat12  = Array.isArray(d['PATRIMONIO_12M'])        ? d['PATRIMONIO_12M']        : null;
+      var ofc12  = Array.isArray(d['OFC_12M'])               ? d['OFC_12M']               : null;
+      var fcf12  = Array.isArray(d['FCF_12M'])               ? d['FCF_12M']               : null;
+      var dn12   = Array.isArray(d['DEUDA_NETA_12M'])        ? d['DEUDA_NETA_12M']        : null;
+      var roic12 = Array.isArray(d['ROIC_12M'])              ? d['ROIC_12M']              : null;
+      var waccN  = num(d,'WACC');
+      var roaC   = Array.isArray(d['ROA_12M'])         ? d['ROA_12M']         : zip(gn12,at12,  function(a,b){return a/b*100;});
+      var roe12C = Array.isArray(d['ROE_12M'])         ? d['ROE_12M']         : zip(gn12,pat12, function(a,b){return a/b*100;});
+      var mEbit  = Array.isArray(d['MARGEN_EBIT_12M']) ? d['MARGEN_EBIT_12M'] : zip(ebit12,ing12,function(a,b){return a/b*100;});
+      var assetT = Array.isArray(d['ASSET_TURNOVER_12M'])? d['ASSET_TURNOVER_12M']: zip(ing12,at12,function(a,b){return a/b;});
+      var ocfNI  = Array.isArray(d['OCF_NETINCOME_12M'])? d['OCF_NETINCOME_12M']: zip(ofc12,gn12,function(a,b){return a/b;});
+      var fcfNI  = Array.isArray(d['FCF_NETINCOME_12M'])? d['FCF_NETINCOME_12M']: zip(fcf12,gn12,function(a,b){return a/b;});
+      var dnFcf12= Array.isArray(d['DN_FCF_12M'])      ? d['DN_FCF_12M']      : zip(dn12,fcf12, function(a,b){return a/b;});
+      var rw12   = Array.isArray(d['ROIC_WACC_12M'])   ? d['ROIC_WACC_12M']   : null;
+      if(!rw12 && roic12 && waccN!==null)
+        rw12 = roic12.map(function(r){return r!==null?r-waccN:null;});
+      return {
+        roa:roaC,roic:roic12,roe:roe12C,
+        croic:Array.isArray(d['CROIC_12M'])?d['CROIC_12M']:null,
+        per:Array.isArray(d['PER_12M'])?d['PER_12M']:null,
+        fcfYield:Array.isArray(d['FCF_YIELD_12M'])?d['FCF_YIELD_12M']:null,
+        ccr:Array.isArray(d['CCR_12M'])?d['CCR_12M']:null,
+        assetTurnover:assetT,beneish:Array.isArray(d['BENEISH_12M'])?d['BENEISH_12M']:null,
+        ocfNI:ocfNI,fcfNI:fcfNI,dnFcf:dnFcf12,margenEbit:mEbit,
+        altman:Array.isArray(d['ALTMAN_12M'])?d['ALTMAN_12M']:null,
+        piotroski:Array.isArray(d['PIOTROSKI_12M'])?d['PIOTROSKI_12M']:null,
+        roicWacc:rw12
+      };
+    }())
+  };
 }
 
 // ══════════════════════════════════════════
@@ -1066,6 +1237,89 @@ function renderDash(c){
     </div>
   </div>
 
+  <!-- ══ 11b. TABLA 12 MESES ══ -->
+  ${(function(){
+    var s12 = c.series12m;
+    if(!s12) return '';
+    var hasSeries = Object.keys(s12).some(function(k){ return s12[k] !== null; });
+    if(!hasSeries) return '';
+
+    var nMeses = 0;
+    Object.keys(s12).forEach(function(k){ if(s12[k] && s12[k].length > nMeses) nMeses = s12[k].length; });
+    if(nMeses > 12) nMeses = 12;
+
+    var mHeaders = '';
+    for(var m = nMeses; m >= 1; m--) mHeaders += '<th style="min-width:54px;text-align:center;padding:7px 4px;font-size:10px;font-family:Space Mono,monospace;color:#6A829E;font-weight:400;letter-spacing:.02em;white-space:nowrap">M-'+m+'</th>';
+
+    var dotClr = { g:'#22c55e', a:'#f59e0b', r:'#ef4444' };
+    var ratiosDef = [
+      { label:'ROA %',            key:'roa',          fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=10?'g':v>=5?'a':'r'; } },
+      { label:'ROIC %',           key:'roic',         fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=15?'g':v>=8?'a':'r'; } },
+      { label:'ROE %',            key:'roe',          fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=17?'g':v>=10?'a':'r'; } },
+      { label:'CROIC %',          key:'croic',        fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=10?'g':v>=5?'a':'r'; } },
+      { label:'PER',              key:'per',          fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v<=20?'g':v<=30?'a':'r'; } },
+      { label:'FCF Yield %',      key:'fcfYield12m',  fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=4?'g':v>=2?'a':'r'; } },
+      { label:'CCR',              key:'ccr12m',       fmt:function(v){ return v.toFixed(2); }, sig:function(v){ return v>=1.2?'g':v>=1.0?'a':'r'; } },
+      { label:'Asset Turnover',   key:'assetTurnover',fmt:function(v){ return v.toFixed(2); }, sig:function(v){ return v>=0.8?'g':v>=0.5?'a':'r'; } },
+      { label:'Beneish M-Score',  key:'beneish',      fmt:function(v){ return v.toFixed(1); }, sig:function(v){ return v<=-2.22?'g':v<=-1.78?'a':'r'; } },
+      { label:'OCF / Net Income', key:'ocfNI12m',     fmt:function(v){ return v.toFixed(2); }, sig:function(v){ return v>=1.0?'g':v>=0.7?'a':'r'; } },
+      { label:'FCF / Net Income', key:'fcfNI12m',     fmt:function(v){ return v.toFixed(2); }, sig:function(v){ return v>=0.8?'g':v>=0.5?'a':'r'; } },
+      { label:'Deuda Neta / FCF', key:'dnFcf',        fmt:function(v){ return v.toFixed(1); }, sig:function(v){ return v<=2?'g':v<=4?'a':'r'; } },
+      { label:'Margen EBIT %',    key:'margenEbit',   fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=15?'g':v>=8?'a':'r'; } },
+      { label:'Altman Z-Score',   key:'altman12m',    fmt:function(v){ return v.toFixed(1); }, sig:function(v){ return v>=3?'g':v>=1.81?'a':'r'; } },
+      { label:'Piotroski',        key:'piotroski',    fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>=7?'g':v>=4?'a':'r'; } },
+      { label:'ROIC – WACC %',   key:'roicWacc',    fmt:function(v){ return v.toFixed(0); }, sig:function(v){ return v>0?'g':v===0?'a':'r'; } }
+    ];
+
+    var tableRows = '';
+    ratiosDef.forEach(function(def){
+      var serie = s12[def.key];
+      if(!serie) return;
+      var padded = serie.slice(0);
+      while(padded.length < nMeses) padded.unshift(null);
+      var cells = '';
+      for(var ci = 0; ci < nMeses; ci++){
+        var v = padded[ci];
+        if(v === null){
+          cells += '<td style="text-align:center;padding:6px 4px;color:#4A5568;font-size:11px">—</td>';
+        } else {
+          var s = def.sig(v);
+          var dc = dotClr[s];
+          cells += '<td style="text-align:center;padding:6px 4px">'
+            +'<span style="display:inline-flex;align-items:center;justify-content:center;gap:2px;font-family:Space Mono,monospace;font-size:11px;color:#D8E6F5;white-space:nowrap">'
+            +def.fmt(v)
+            +'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+dc+'"></span>'
+            +'</span></td>';
+        }
+      }
+      tableRows += '<tr style="border-bottom:1px solid rgba(26,86,196,.1)">'
+        +'<td style="padding:7px 12px 7px 0;color:#8FA8C8;font-size:11px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:#080E1A;z-index:1">'+def.label+'</td>'
+        +cells
+        +'</tr>';
+    });
+
+    return '<div class="dash-section">'
+      +'<div class="sec-tag">📈 Historial mensual</div>'
+      +'<h2 class="sec-title">Tabla Completa <span>('+nMeses+' Meses)</span></h2>'
+      +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(26,86,196,.2);border-radius:10px;background:#080E1A">'
+      +'<table style="width:100%;border-collapse:collapse;min-width:640px">'
+      +'<thead>'
+      +'<tr style="background:#0D1B3E;border-bottom:1px solid rgba(26,86,196,.3)">'
+      +'<th style="text-align:left;padding:9px 12px 9px 0;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#6A829E;position:sticky;left:0;background:#0D1B3E;z-index:2;white-space:nowrap">Ratio</th>'
+      +mHeaders
+      +'</tr>'
+      +'</thead>'
+      +'<tbody>'+tableRows+'</tbody>'
+      +'</table>'
+      +'</div>'
+      +'<div style="margin-top:10px;display:flex;gap:18px;font-size:10px;color:#6A829E">'
+      +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px"></span>Saludable</span>'
+      +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px"></span>Neutro</span>'
+      +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px"></span>Alerta</span>'
+      +'</div>'
+      +'</div>';
+  }())}
+
   <!-- ══ 12. CIERRE ══ -->
   <div class="close-sec">
     <div class="close-big">${c.cntGreen}</div>
@@ -1500,6 +1754,8 @@ function updateGlobalCount(){
   if(el) el.textContent = checked;
   var totEl = document.getElementById('sel-total-count');
   if(totEl) totEl.textContent = allChks.length;
+  // Re-renderizar el dashboard si ya hay un cálculo base disponible
+  if(_baseCalc) _reRenderSelection();
 }
 
 function toggleAll(val){
@@ -1537,42 +1793,16 @@ function parseAndRender(){
 
   if(!d['INGRESOS']&&!d['EBIT']){ errBox.textContent='No se encontraron datos financieros. Verificá el formato e intentá de nuevo.'; errBox.style.display='block'; return; }
 
+  // Campo empresa tiene prioridad sobre el key ACCION en el texto pegado
+  var empresaField=((document.getElementById('inp-empresa')||{}).value||'').trim();
+  if(empresaField) d['ACCION']=empresaField;
+
   try {
     var calc = calcIndicators(d);
-
-    // Leer IDs seleccionados del panel
-    var selectedIds = [];
-    getIndChks().forEach(function(chk){
-      if(chk.checked) selectedIds.push(parseInt(chk.value));
-    });
-    // Si no hay ninguno seleccionado, usar todos
-    if(selectedIds.length === 0) calc.inds.forEach(function(i){ selectedIds.push(i.n); });
-
-    var filteredCalc = Object.assign({}, calc);
-    filteredCalc.inds = calc.inds.filter(function(i){ return selectedIds.indexOf(i.n) !== -1; });
-    filteredCalc.cntGreen = filteredCalc.inds.filter(function(i){ return i.signal==='🟢'; }).length;
-    filteredCalc.cntAmber = filteredCalc.inds.filter(function(i){ return i.signal==='🟡'; }).length;
-    filteredCalc.cntRed   = filteredCalc.inds.filter(function(i){ return i.signal==='🔴'; }).length;
-    filteredCalc._showBPACagr    = selectedIds.indexOf(36) !== -1;
-    filteredCalc._showEbitEbitda = selectedIds.indexOf(37) !== -1;
-    filteredCalc._showCCR        = selectedIds.indexOf(38) !== -1;
-
-    // Agregar indicadores personalizados seleccionados
-    selectedIds.forEach(function(id){
-      if(id >= 100){
-        var cind = _customInds.find(function(i){ return i.n === id; });
-        if(cind) filteredCalc.inds.push(cind);
-      }
-    });
-    // Recuentar tras agregar personalizados
-    filteredCalc.cntGreen = filteredCalc.inds.filter(function(i){ return i.signal==='🟢'; }).length;
-    filteredCalc.cntAmber = filteredCalc.inds.filter(function(i){ return i.signal==='🟡'; }).length;
-    filteredCalc.cntRed   = filteredCalc.inds.filter(function(i){ return i.signal==='🔴'; }).length;
-
-    renderDash(filteredCalc);
+    _baseCalc = calc;
+    _reRenderSelection();
     _lastRawInput = raw;
-    _lastCalc = filteredCalc;
-    okBox.textContent='✓ '+Object.keys(d).length+' campos interpretados · '+selectedIds.length+' indicadores incluidos.';
+    okBox.textContent='✓ '+Object.keys(d).length+' campos interpretados · '+(_lastCalc ? _lastCalc.inds.length : calc.inds.length)+' indicadores incluidos.';
     okBox.style.display='block';
     showDash(); window.scrollTo({top:0,behavior:'smooth'});
   } catch(e){ errBox.textContent='Error al calcular indicadores: '+e.message; errBox.style.display='block'; console.error(e); }
@@ -1581,6 +1811,32 @@ function parseAndRender(){
 // ══ HISTORIAL + COMPARTIR ══
 var _lastRawInput = null;
 var _lastCalc = null;
+var _baseCalc = null;
+
+function _reRenderSelection(){
+  if(!_baseCalc) return;
+  var selectedIds = [];
+  getIndChks().forEach(function(chk){
+    if(chk.checked) selectedIds.push(parseInt(chk.value));
+  });
+  if(selectedIds.length === 0) _baseCalc.inds.forEach(function(i){ selectedIds.push(i.n); });
+  var filteredCalc = Object.assign({}, _baseCalc);
+  filteredCalc.inds = _baseCalc.inds.filter(function(i){ return selectedIds.indexOf(i.n) !== -1; });
+  selectedIds.forEach(function(id){
+    if(id >= 100){
+      var cind = _customInds.find(function(i){ return i.n === id; });
+      if(cind) filteredCalc.inds.push(cind);
+    }
+  });
+  filteredCalc.cntGreen = filteredCalc.inds.filter(function(i){ return i.signal==='🟢'; }).length;
+  filteredCalc.cntAmber = filteredCalc.inds.filter(function(i){ return i.signal==='🟡'; }).length;
+  filteredCalc.cntRed   = filteredCalc.inds.filter(function(i){ return i.signal==='🔴'; }).length;
+  filteredCalc._showBPACagr    = selectedIds.indexOf(36) !== -1;
+  filteredCalc._showEbitEbitda = selectedIds.indexOf(37) !== -1;
+  filteredCalc._showCCR        = selectedIds.indexOf(38) !== -1;
+  _lastCalc = filteredCalc;
+  renderDash(filteredCalc);
+}
 
 function saveAnalisis(){
   if(!_lastCalc) return;
@@ -1873,4 +2129,60 @@ async function _runCLCompareIA(cA, cB, empA, empB) {
       }, 300);
     }
   } catch(e){}
+})();
+
+// ══ CARGA DE ARCHIVO .DOCX ══
+(function(){
+  function processCLDocx(file){
+    if(typeof mammoth === 'undefined'){ alert('Error: mammoth.js no cargó correctamente.'); return; }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      mammoth.extractRawText({ arrayBuffer: ev.target.result })
+        .then(function(result){
+          var text = result.value || '';
+          if(!text.trim()){ alert('No se pudo extraer texto del archivo.'); return; }
+          var ta = document.getElementById('paste-area');
+          if(ta){ ta.value = text; }
+          // Si el campo empresa está vacío, sugerir el nombre del archivo
+          var empField = document.getElementById('inp-empresa');
+          if(empField && !empField.value.trim()){
+            empField.value = file.name.replace(/\.docx$/i,'').replace(/[_-]/g,' ');
+          }
+          showInput();
+          parseAndRender();
+        })
+        .catch(function(err){ alert('Error al leer el archivo: ' + err.message); });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var fileInput = document.getElementById('cl-file-input');
+    var dropZone  = document.getElementById('cl-drop-zone');
+    if(!fileInput || !dropZone) return;
+
+    fileInput.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(file) processCLDocx(file);
+      fileInput.value = '';
+    });
+
+    dropZone.addEventListener('dragover', function(e){
+      e.preventDefault();
+      dropZone.style.background = '#0D1627';
+      dropZone.style.borderColor = '#5A9BFF';
+    });
+    dropZone.addEventListener('dragleave', function(){
+      dropZone.style.background = '#080E1A';
+      dropZone.style.borderColor = 'rgba(90,155,255,.35)';
+    });
+    dropZone.addEventListener('drop', function(e){
+      e.preventDefault();
+      dropZone.style.background = '#080E1A';
+      dropZone.style.borderColor = 'rgba(90,155,255,.35)';
+      var file = e.dataTransfer.files[0];
+      if(file && file.name.toLowerCase().endsWith('.docx')) processCLDocx(file);
+      else alert('Por favor subí un archivo .docx');
+    });
+  });
 })();

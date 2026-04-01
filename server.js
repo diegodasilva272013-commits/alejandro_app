@@ -2229,12 +2229,16 @@ app.get('/api/datos-empresa/:ticker', async (req, res) => {
 
   try {
     const q = async ep => {
-      const r = await fetch(`${BASE}${ep}&apikey=${KEY}`);
-      const text = await r.text();
-      try { return JSON.parse(text); } catch { return []; } // FMP puede devolver texto "Premium required"
+      try {
+        const r = await fetch(`${BASE}${ep}&apikey=${KEY}`);
+        const text = await r.text();
+        const parsed = JSON.parse(text);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch { return []; }
     };
 
-    const [income, balance, cashflow, metrics, profileArr, ratios, sma50Arr, sma200Arr] = await Promise.all([
+    const [income, balance, cashflow, metrics, profileArr, ratios, sma50Arr, sma200Arr,
+           incQ, balQ, cfQ, kmQ] = await Promise.all([
       q(`/income-statement?symbol=${ticker}&limit=5`),
       q(`/balance-sheet-statement?symbol=${ticker}&limit=5`),
       q(`/cash-flow-statement?symbol=${ticker}&limit=5`),
@@ -2243,6 +2247,11 @@ app.get('/api/datos-empresa/:ticker', async (req, res) => {
       q(`/ratios?symbol=${ticker}&limit=5`),
       q(`/technical-indicator/sma?symbol=${ticker}&period=50&limit=1`),
       q(`/technical-indicator/sma?symbol=${ticker}&period=200&limit=1`),
+      // Datos trimestrales para tabla 12M (limit=5 = máximo del plan básico)
+      q(`/income-statement?symbol=${ticker}&limit=5&period=quarter`),
+      q(`/balance-sheet-statement?symbol=${ticker}&limit=5&period=quarter`),
+      q(`/cash-flow-statement?symbol=${ticker}&limit=5&period=quarter`),
+      q(`/key-metrics?symbol=${ticker}&limit=5&period=quarter`),
     ]);
 
     if (!Array.isArray(income) || !income.length) {
@@ -2501,10 +2510,170 @@ app.get('/api/datos-empresa/:ticker', async (req, res) => {
     res.json({
       meta: { empresa, ticker, sector: prof?.sector || '', moneda, precio: prof?.price || null },
       checklist,
-      mega:        investingPro,
+      mega:        checklist,
       roimp:       investingPro,
       senales:     investingPro,
       acciones360: investingPro,
+      series12m:   (function() {
+        // Calcular series trimestrales para la tabla 12M
+        const safeQ = d => Array.isArray(d) ? d : [];
+        const inc5  = safeQ(incQ).slice().reverse();  // oldest first
+        const bal5  = safeQ(balQ).slice().reverse();
+        const cf5   = safeQ(cfQ).slice().reverse();
+        const km5   = safeQ(kmQ).slice().reverse();   // key-metrics quarterly
+        if (!inc5.length) return null;
+
+        const n2 = (v) => v != null ? Math.round(v / 1_000_000 * 100) / 100 : null;
+
+        // byDate: match by date, fallback to same position index (handles minor date mismatches)
+        const byDate = (arr, key) => inc5.map((r, i) => {
+          const row = arr.find(x => x.date === r.date) || arr[i] || {};
+          return n2(row[key]);
+        });
+
+        // byDateKm: read from key-metrics quarterly (decimal → multiply by mult)
+        const byDateKm = (key, mult = 1) => km5.length ? inc5.map((r, i) => {
+          const row = km5.find(x => x.date === r.date) || km5[i] || {};
+          const v = row[key];
+          return v != null ? Math.round(v * mult * 100) / 100 : null;
+        }) : null;
+
+        const rev  = inc5.map(r => n2(r.revenue));
+        const ni   = inc5.map(r => n2(r.netIncome));
+        const ebit = inc5.map(r => n2(r.ebit || r.operatingIncome));
+        const ta   = byDate(bal5, 'totalAssets');
+        const eq   = byDate(bal5, 'totalStockholdersEquity');
+        const ocf  = byDate(cf5,  'operatingCashFlow');
+        const fcf  = byDate(cf5,  'freeCashFlow');
+        const dn   = byDate(bal5, 'netDebt');
+
+        const zip = (a, b, fn) => a.map((av, i) => {
+          const bv = b[i];
+          return (av != null && bv != null && bv !== 0) ? Math.round(fn(av, bv) * 100) / 100 : null;
+        });
+        const fmt = arr => arr && arr.some(v => v != null) ? arr.join(',') : null;
+
+        // ── ROIC: from key-metrics (decimal→%) or computed from statements ──
+        let roic5 = byDateKm('roic', 100);
+        if (!roic5 || !roic5.some(v => v != null)) {
+          const totalDebt5 = byDate(bal5, 'totalDebt');
+          const cash5      = byDate(bal5, 'cashAndCashEquivalents');
+          const ic5 = eq.map((e, i) => {
+            const d = totalDebt5[i], c = cash5[i];
+            return (e != null || d != null) ? (e || 0) + (d || 0) - (c || 0) : null;
+          });
+          roic5 = ic5.map((ic, i) => {
+            const eb = ebit[i];
+            if (ic == null || ic <= 0 || eb == null) return null;
+            return Math.round(eb * 4 / ic * 10000) / 100; // annualized pre-tax ROIC %
+          });
+        }
+
+        // ── CROIC: FCF_annualized / InvestedCapital ──────────────────────────
+        const ic5forCroic = km5.length
+          ? inc5.map((r, i) => {
+              const row = km5.find(x => x.date === r.date) || km5[i] || {};
+              return row.investedCapital != null ? row.investedCapital / 1_000_000 : null;
+            })
+          : (() => {
+              const totalDebt5 = byDate(bal5, 'totalDebt');
+              const cash5      = byDate(bal5, 'cashAndCashEquivalents');
+              return eq.map((e, i) => {
+                const d = totalDebt5[i], c = cash5[i];
+                return (e != null || d != null) ? (e || 0) + (d || 0) - (c || 0) : null;
+              });
+            })();
+        const croic5 = fcf.map((f, i) => {
+          const ic = ic5forCroic[i];
+          if (f == null || ic == null || ic <= 0) return null;
+          return Math.round(f * 4 / ic * 10000) / 100; // annualized FCF / IC %
+        });
+
+        // ── PER, FCF Yield, CCR from key-metrics ────────────────────────────
+        const per5      = byDateKm('peRatio');
+        const fcfYield5 = byDateKm('freeCashFlowYield', 100);  // decimal → %
+        const ccr5      = byDateKm('incomeQuality');            // OCF/NI from FMP
+
+        // ── Altman Z-Score (needs marketCap from km5) ────────────────────────
+        const ca5  = byDate(bal5, 'totalCurrentAssets');
+        const cl5  = byDate(bal5, 'totalCurrentLiabilities');
+        const re5  = byDate(bal5, 'retainedEarnings');
+        const tl5  = byDate(bal5, 'totalLiabilities');
+        // mc5: from quarterly key-metrics historical, or fall back to current mkt cap (approximation)
+        const currentMcM = prof?.marketCap ? prof.marketCap / 1_000_000 : null;
+        const mc5  = km5.length
+          ? inc5.map((r, i) => {
+              const row = km5.find(x => x.date === r.date) || km5[i] || {};
+              return row.marketCap != null ? row.marketCap / 1_000_000 : currentMcM;
+            })
+          : (currentMcM ? inc5.map(() => currentMcM) : null);
+        const altman5 = (mc5 && mc5.some(v => v != null))
+          ? ta.map((t, i) => {
+              if (t == null || t <= 0) return null;
+              const wc = (ca5[i] != null && cl5[i] != null) ? ca5[i] - cl5[i] : null;
+              const x1 = wc    != null ? wc / t                                   : 0;
+              const x2 = re5[i]!= null ? re5[i] / t                               : 0;
+              const x3 = ebit[i]!= null ? ebit[i] * 4 / t                         : 0;
+              const x4 = (mc5[i] != null && tl5[i] != null && tl5[i] > 0) ? mc5[i] / tl5[i] : 0;
+              const x5 = rev[i] != null ? rev[i] * 4 / t                          : 0;
+              return Math.round((1.2*x1 + 1.4*x2 + 3.3*x3 + 0.6*x4 + x5) * 100) / 100;
+            })
+          : null;
+
+        // ── Piotroski F-Score (0-9, per quarter vs prior quarter) ────────────
+        const grossProfit5 = inc5.map(r => n2(r.grossProfit));
+        const totalDebt5p  = byDate(bal5, 'totalDebt');
+        const shares5      = inc5.map(r => r.weightedAverageShsOut || null);
+        const piotroski5   = inc5.map((_, i) => {
+          if (i === 0) return null; // need prior quarter for deltas
+          const roa_i = (ni[i]  != null && ta[i]   != null && ta[i]   > 0) ? ni[i]  / ta[i]   : null;
+          const roa_p = (ni[i-1]!= null && ta[i-1] != null && ta[i-1] > 0) ? ni[i-1]/ ta[i-1] : null;
+          const lev_i = (totalDebt5p[i]   != null && ta[i]   != null && ta[i]   > 0) ? totalDebt5p[i]   / ta[i]   : null;
+          const lev_p = (totalDebt5p[i-1] != null && ta[i-1] != null && ta[i-1] > 0) ? totalDebt5p[i-1] / ta[i-1] : null;
+          const cr_i  = (ca5[i]   != null && cl5[i]   != null && cl5[i]   > 0) ? ca5[i]   / cl5[i]   : null;
+          const cr_p  = (ca5[i-1] != null && cl5[i-1] != null && cl5[i-1] > 0) ? ca5[i-1] / cl5[i-1] : null;
+          const gm_i  = (grossProfit5[i]   != null && rev[i]   != null && rev[i]   > 0) ? grossProfit5[i]   / rev[i]   : null;
+          const gm_p  = (grossProfit5[i-1] != null && rev[i-1] != null && rev[i-1] > 0) ? grossProfit5[i-1] / rev[i-1] : null;
+          const at_i  = (rev[i]   != null && ta[i]   != null && ta[i]   > 0) ? rev[i]   / ta[i]   : null;
+          const at_p  = (rev[i-1] != null && ta[i-1] != null && ta[i-1] > 0) ? rev[i-1] / ta[i-1] : null;
+          let score = 0;
+          if (roa_i != null)                          score += roa_i > 0 ? 1 : 0;             // F1
+          if (ocf[i] != null)                         score += ocf[i] > 0 ? 1 : 0;           // F2
+          if (roa_i != null && roa_p != null)         score += roa_i > roa_p ? 1 : 0;        // F3
+          if (ocf[i] != null && ni[i] != null)        score += ocf[i] > ni[i] ? 1 : 0;      // F4
+          if (lev_i != null && lev_p != null)         score += lev_i < lev_p ? 1 : 0;       // F5
+          if (cr_i  != null && cr_p  != null)         score += cr_i  > cr_p  ? 1 : 0;       // F6
+          if (shares5[i] != null && shares5[i-1] != null) score += shares5[i] <= shares5[i-1] ? 1 : 0; // F7
+          if (gm_i  != null && gm_p  != null)         score += gm_i  > gm_p  ? 1 : 0;       // F8
+          if (at_i  != null && at_p  != null)         score += at_i  > at_p  ? 1 : 0;       // F9
+          return score;
+        });
+
+        return {
+          INGRESOS_12M:        fmt(rev),
+          GANANCIAS_NETAS_12M: fmt(ni),
+          EBIT_12M:            fmt(ebit),
+          ACTIVOS_TOTALES_12M: fmt(ta),
+          PATRIMONIO_12M:      fmt(eq),
+          OFC_12M:             fmt(ocf),
+          FCF_12M:             fmt(fcf),
+          DEUDA_NETA_12M:      fmt(dn),
+          ROA_12M:             fmt(zip(ni, ta,   (a,b) => a/b*100)),
+          ROE_12M:             fmt(zip(ni, eq,   (a,b) => a/b*100)),
+          MARGEN_EBIT_12M:     fmt(zip(ebit,rev, (a,b) => a/b*100)),
+          ASSET_TURNOVER_12M:  fmt(zip(rev, ta,  (a,b) => a/b)),
+          OCF_NETINCOME_12M:   fmt(zip(ocf, ni,  (a,b) => a/b)),
+          FCF_NETINCOME_12M:   fmt(zip(fcf, ni,  (a,b) => a/b)),
+          DN_FCF_12M:          fmt(zip(dn,  fcf, (a,b) => a/b)),
+          ROIC_12M:            fmt(roic5),
+          CROIC_12M:           fmt(croic5),
+          PER_12M:             fmt(per5),
+          FCF_YIELD_12M:       fmt(fcfYield5),
+          CCR_12M:             fmt(ccr5),
+          ALTMAN_12M:          fmt(altman5),
+          PIOTROSKI_12M:       fmt(piotroski5),
+        };
+      }()),
     });
 
   } catch (err) {
@@ -2520,30 +2689,43 @@ app.get('/api/buscar-empresa', async (req, res) => {
   if (!q || q.length < 1) return res.json([]);
   if (!KEY) return res.json([]);
   try {
-    // 1) Intentar búsqueda general (por nombre o ticker)
-    const r1   = await fetch(`https://financialmodelingprep.com/stable/search?query=${encodeURIComponent(q)}&limit=7&apikey=${KEY}`);
-    const j1   = await r1.json();
-    // Si responde con array válido, usarlo
-    if (Array.isArray(j1) && j1.length > 0 && j1[0].symbol) {
-      return res.json(j1.slice(0, 7).map(item => ({
-        ticker:   item.symbol,
-        nombre:   item.name || item.companyName || item.symbol,
-        exchange: item.stockExchange || item.exchangeShortName || '',
-        tipo:     item.type || 'EQUITY'
-      })));
-    }
-    // 2) Fallback: validar como ticker exacto con /profile
-    const ticker = q.toUpperCase();
-    const r2   = await fetch(`https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(ticker)}&apikey=${KEY}`);
-    const j2   = await r2.json();
-    const prof = Array.isArray(j2) ? j2[0] : null;
-    if (!prof || !prof.symbol) return res.json([]);
-    return res.json([{
-      ticker:   prof.symbol,
-      nombre:   prof.companyName || prof.symbol,
-      exchange: prof.exchangeFullName || prof.exchange || '',
-      tipo:     'EQUITY'
-    }]);
+    const BASE = 'https://financialmodelingprep.com/stable';
+    const get  = async ep => { try { const r = await fetch(ep); const t = await r.text(); return JSON.parse(t); } catch { return []; } };
+
+    // Buscar por nombre Y por símbolo en paralelo
+    const [byName, bySym] = await Promise.all([
+      get(`${BASE}/search-name?query=${encodeURIComponent(q)}&limit=10&apikey=${KEY}`),
+      get(`${BASE}/search-symbol?query=${encodeURIComponent(q)}&limit=10&apikey=${KEY}`),
+    ]);
+
+    const nameArr = Array.isArray(byName) ? byName : [];
+    const symArr  = Array.isArray(bySym)  ? bySym  : [];
+
+    // Combinar sin duplicados (prioridad: symbol match primero)
+    const seen = new Set();
+    const all  = [...symArr, ...nameArr].filter(item => {
+      if (!item || !item.symbol) return false;
+      if (seen.has(item.symbol)) return false;
+      seen.add(item.symbol);
+      return true;
+    });
+
+    if (!all.length) return res.json([]);
+
+    // Ordenar: NASDAQ/NYSE primero
+    const priority = { NASDAQ: 0, NYSE: 1, AMEX: 2 };
+    all.sort((a, b) => {
+      const pa = priority[a.exchange] ?? 10;
+      const pb = priority[b.exchange] ?? 10;
+      return pa - pb;
+    });
+
+    return res.json(all.slice(0, 8).map(item => ({
+      ticker:   item.symbol,
+      nombre:   item.name || item.companyName || item.symbol,
+      exchange: item.exchangeFullName || item.exchange || '',
+      tipo:     'EQUITY',
+    })));
   } catch (err) {
     console.error('Error búsqueda empresa:', err.message);
     res.json([]);
@@ -2620,6 +2802,283 @@ function limpiarPDFsViejos() {
 // Ejecutar al iniciar y luego cada 24 horas
 limpiarPDFsViejos();
 setInterval(limpiarPDFsViejos, 24 * 60 * 60 * 1000);
+
+// ─── API: Series históricas trimestrales para tabla 12M (FMP quarterly) ──────
+app.get('/api/financials12m/:ticker', requireAuth, async (req, res) => {
+  const ticker = req.params.ticker.toUpperCase().trim();
+  const KEY    = process.env.FMP_API_KEY;
+  if (!KEY) return res.status(500).json({ error: 'FMP_API_KEY no configurada.' });
+
+  try {
+    const BASE = 'https://financialmodelingprep.com/stable';
+    const q = async ep => {
+      const r = await fetch(`${BASE}${ep}&apikey=${KEY}`);
+      const text = await r.text();
+      try { return JSON.parse(text); } catch { return []; }
+    };
+
+    const [income, balance, cashflow] = await Promise.all([
+      q(`/income-statement?symbol=${ticker}&limit=5&period=quarter`),
+      q(`/balance-sheet-statement?symbol=${ticker}&limit=5&period=quarter`),
+      q(`/cash-flow-statement?symbol=${ticker}&limit=5&period=quarter`),
+    ]);
+
+    if (!Array.isArray(income) || !income.length) {
+      return res.status(404).json({ error: `No se encontraron datos trimestrales para "${ticker}". Verificá el ticker (ej: AAPL, MSFT, GFNORTEO.MX).` });
+    }
+
+    // FMP devuelve newest-first → revertir a oldest-first
+    const inc = [...income].reverse();
+    const bal = Array.isArray(balance)  ? [...balance].reverse()  : [];
+    const cf  = Array.isArray(cashflow) ? [...cashflow].reverse() : [];
+
+    const M = 1_000_000;
+    const n = (v, d = 2) => v != null ? Math.round(v / M * Math.pow(10,d)) / Math.pow(10,d) : null;
+
+    // Alinear por fecha: usar income como base
+    const dates  = inc.map(r => r.date);
+    const byDate = (arr, key) => dates.map(dt => {
+      const row = arr.find(r => r.date === dt) || {};
+      const v = row[key];
+      return v != null ? n(v) : null;
+    });
+
+    const rev   = inc.map(r => n(r.revenue));
+    const gp    = inc.map(r => n(r.grossProfit));
+    const ni    = inc.map(r => n(r.netIncome));
+    const ebit  = inc.map(r => n(r.ebit || r.operatingIncome));
+    const ta    = byDate(bal, 'totalAssets');
+    const eq    = byDate(bal, 'totalStockholdersEquity');
+    const ocf   = byDate(cf,  'operatingCashFlow');
+    const fcf   = byDate(cf,  'freeCashFlow');
+    const dn    = byDate(bal, 'netDebt');
+
+    // Calcular ratios elemento a elemento
+    function zipCalc(a, b, fn) {
+      if (!a || !b) return null;
+      const out = a.map((av, i) => {
+        const bv = b[i];
+        return (av != null && bv != null && bv !== 0) ? Math.round(fn(av, bv) * 100) / 100 : null;
+      });
+      return out.some(v => v != null) ? out : null;
+    }
+
+    const roa       = zipCalc(ni, ta,   (a,b) => a/b*100);
+    const roe       = zipCalc(ni, eq,   (a,b) => a/b*100);
+    const margenEbt = zipCalc(ebit, rev,(a,b) => a/b*100);
+    const assetT    = zipCalc(rev, ta,  (a,b) => a/b);
+    const ocfNI     = zipCalc(ocf, ni,  (a,b) => a/b);
+    const fcfNI     = zipCalc(fcf, ni,  (a,b) => a/b);
+    const dnFcf     = zipCalc(dn,  fcf, (a,b) => a/b);
+
+    const fmt = arr => arr && arr.some(v=>v!=null) ? arr.join(',') : null;
+
+    res.json({
+      ok: true,
+      ticker,
+      periodos: dates,
+      series: {
+        GANANCIAS_NETAS_12M: fmt(ni),
+        ACTIVOS_TOTALES_12M: fmt(ta),
+        INGRESOS_12M:        fmt(rev),
+        EBIT_12M:            fmt(ebit),
+        PATRIMONIO_12M:      fmt(eq),
+        OFC_12M:             fmt(ocf),
+        FCF_12M:             fmt(fcf),
+        DEUDA_NETA_12M:      fmt(dn),
+        ROA_12M:             fmt(roa),
+        ROE_12M:             fmt(roe),
+        MARGEN_EBIT_12M:     fmt(margenEbt),
+        ASSET_TURNOVER_12M:  fmt(assetT),
+        OCF_NETINCOME_12M:   fmt(ocfNI),
+        FCF_NETINCOME_12M:   fmt(fcfNI),
+        DN_FCF_12M:          fmt(dnFcf),
+      },
+    });
+  } catch (err) {
+    console.error('Error /api/financials12m:', err);
+    res.status(500).json({ error: 'Error obteniendo series históricas: ' + (err.message || err) });
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MÓDULO EMPRESAS EXTRAORDINARIAS — GPT-4o
+// ═════════════════════════════════════════════════════════════════════════════
+
+const _empExtCache = new Map();
+
+function _empExtCacheKey(ticker) {
+  return `${ticker.toUpperCase()}_${new Date().toISOString().slice(0, 10)}`;
+}
+
+function _getLast12Months() {
+  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now = new Date();
+  const result = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    result.push(`${MESES[d.getMonth()]} ${d.getFullYear()}`);
+  }
+  return result;
+}
+
+async function _callGPT(apiKey, systemPrompt, userPrompt, maxTokens) {
+  const { OpenAI } = require('openai');
+  const client = new OpenAI({ apiKey });
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: maxTokens,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  });
+  return completion.choices[0].message.content || '';
+}
+
+async function _callGPTText(apiKey, systemPrompt, userPrompt, maxTokens) {
+  const { OpenAI } = require('openai');
+  const client = new OpenAI({ apiKey });
+  const completion = await client.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  });
+  return completion.choices[0].message.content || '';
+}
+
+// ─── POST /api/emp-ext/ratios ────────────────────────────────────────────────
+app.post('/api/emp-ext/ratios', requireAuth, iaLimiter, async (req, res) => {
+  const { ticker, company } = req.body || {};
+  if (!ticker) return res.status(400).json({ error: 'ticker requerido' });
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY no configurada.' });
+
+  const cacheKey = _empExtCacheKey(ticker);
+  const cached = _empExtCache.get(cacheKey);
+  if (cached && cached.ratios) return res.json(cached.ratios);
+
+  const months = _getLast12Months();
+
+  const systemPrompt = `Eres un analista financiero cuantitativo de élite con acceso a todos los datos históricos de empresas públicas.
+REGLAS CRÍTICAS:
+1. Responde ÚNICAMENTE con JSON válido, sin texto adicional.
+2. NUNCA uses null si tienes información sobre la empresa — usa siempre tu mejor estimación basada en los datos históricos conocidos de la empresa.
+3. Los ratios financieros cambian trimestralmente. Para los 12 meses, repite el valor del trimestre correspondiente para cada mes de ese trimestre.
+4. Si la empresa no reporta ciertos datos (ej: Book-to-Bill para empresas de consumo), usa null solo en ese caso específico.
+5. Usa tus datos de entrenamiento más recientes disponibles.`;
+
+  const userPrompt = `Necesito los 20 ratios financieros de "${ticker.toUpperCase()}"${company && company !== ticker ? ` (${company})` : ''} para los últimos 12 meses: ${months.join(', ')}.
+
+Los datos financieros son trimestrales. Asigna el valor del trimestre a cada mes de ese trimestre:
+- Q1 (Ene-Mar): mismo valor para los 3 meses
+- Q2 (Abr-Jun): mismo valor para los 3 meses
+- Q3 (Jul-Sep): mismo valor para los 3 meses
+- Q4 (Oct-Dic): mismo valor para los 3 meses
+
+Responde con este JSON exacto, reemplazando los valores de ejemplo con datos REALES de ${ticker.toUpperCase()}:
+
+{
+  "ticker": "${ticker.toUpperCase()}",
+  "company": "NOMBRE REAL DE LA EMPRESA",
+  "months": ${JSON.stringify(months)},
+  "ratios": [
+    {"key": "roic",       "name": "ROIC",              "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "roa",        "name": "ROA",               "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "roe",        "name": "ROE",               "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "croic",      "name": "CROIC",             "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "per",        "name": "PER",               "unit": "x",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "fcfYield",   "name": "FCF Yield",         "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "ccr",        "name": "CCR",               "unit": "",    "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "ocfNi",      "name": "OCF / Net Income",  "unit": "",    "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "fcfNi",      "name": "FCF / Net Income",  "unit": "",    "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "accrual",    "name": "Accrual Ratio",     "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "assetTurn",  "name": "Asset Turnover",    "unit": "",    "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "gpAssets",   "name": "GP / Assets",       "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "ebitMargin", "name": "Margen EBIT",       "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "roicWacc",   "name": "ROIC − WACC",       "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "fcfCagr",    "name": "FCF CAGR (3a)",     "unit": "%",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "deudaFcf",   "name": "Deuda Neta / FCF",  "unit": "x",   "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "altmanZ",    "name": "Altman Z-Score",    "unit": "",    "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "piotroski",  "name": "Piotroski F-Score", "unit": "/9",  "values": [0,0,0,0,0,0,0,0,0,0,0,0]},
+    {"key": "bookBill",   "name": "Book-to-Bill",      "unit": "",    "values": [null,null,null,null,null,null,null,null,null,null,null,null]},
+    {"key": "backlog",    "name": "Backlog",            "unit": "txt", "values": ["","","","","","","","","","","",""]}
+  ]
+}
+
+IMPORTANTE:
+- Para "backlog": usa "Creciente" o "Decreciente" en cada mes según la tendencia del trimestre. Si no aplica, usa "N/D".
+- Para "bookBill": si la empresa no tiene backlog de pedidos (ej: empresa de consumo o software), usa null en todos los meses.
+- Para TODOS los demás ratios: usa números reales basados en tus datos de entrenamiento de ${ticker.toUpperCase()}. NO uses 0 como placeholder — usa los valores reales.
+- El array de values SIEMPRE debe tener exactamente 12 elementos.`;
+
+  try {
+    const text = await _callGPT(apiKey, systemPrompt, userPrompt, 5000);
+    console.log('[emp-ext/ratios] RAW GPT RESPONSE (primeros 500 chars):', text.slice(0, 500));
+    const data = JSON.parse(text);
+    console.log('[emp-ext/ratios] PARSED KEYS:', Object.keys(data));
+    console.log('[emp-ext/ratios] months/quarters:', data.months || data.quarters);
+    console.log('[emp-ext/ratios] ratios count:', (data.ratios || []).length);
+    if (data.ratios && data.ratios[0]) console.log('[emp-ext/ratios] primer ratio:', JSON.stringify(data.ratios[0]));
+    // Normalize key
+    if (data.quarters && !data.months) data.months = data.quarters;
+
+    const existing = _empExtCache.get(cacheKey) || {};
+    _empExtCache.set(cacheKey, { ...existing, ratios: data });
+    res.json(data);
+  } catch (err) {
+    console.error('Error /api/emp-ext/ratios:', err);
+    res.status(500).json({ error: err.message || 'Error obteniendo ratios.' });
+  }
+});
+
+// ─── POST /api/emp-ext/analisis ──────────────────────────────────────────────
+app.post('/api/emp-ext/analisis', requireAuth, iaLimiter, async (req, res) => {
+  const { ticker, company } = req.body || {};
+  if (!ticker) return res.status(400).json({ error: 'ticker requerido' });
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY no configurada.' });
+
+  const cacheKey = _empExtCacheKey(ticker);
+  const cached = _empExtCache.get(cacheKey);
+  if (cached && cached.analisis) return res.json({ analisis: cached.analisis });
+
+  const systemPrompt = `Eres un analista financiero institucional de élite. Redactas análisis profesionales, concisos y basados en datos reales de tu entrenamiento. Sé específico con cifras, fechas y nombres. Tono institucional.`;
+
+  const userPrompt = `Redacta un análisis narrativo profesional de "${ticker.toUpperCase()}"${company && company !== ticker ? ` (${company})` : ''} con EXACTAMENTE estas 5 secciones en Markdown:
+
+## Resumen del Negocio
+Qué hace la empresa, sector, modelo de negocio, ventaja competitiva (MOAT), posición en el mercado. 2-3 párrafos con cifras reales.
+
+## Tendencia Financiera (Últimos 12 Meses)
+Evolución de ingresos, márgenes EBIT/EBITDA, FCF y deuda. Incluye cifras concretas (USD, %, YoY). Mínimo 3 métricas con números.
+
+## Momentum y Análisis Técnico
+Precio actual vs máximos históricos (52w), fuerza relativa vs sector, tendencia del precio, si cotiza cerca de breakout. Incluye precios concretos.
+
+## Opiniones de Expertos y Catalizadores
+Consenso de analistas (Buy/Hold/Sell), precio objetivo promedio, principales casas de bolsa que cubren la acción, catalizadores clave próximos.
+
+## Veredicto — Protocolo Empresas Extraordinarias
+¿Es candidata? Lista las fortalezas y debilidades vs los criterios del protocolo (ROIC≥15%, FCF CAGR≥15%, Piotroski≥7, etc.). Conclusión clara.`;
+
+  try {
+    const analisis = await _callGPTText(apiKey, systemPrompt, userPrompt, 2500);
+
+    const existing = _empExtCache.get(cacheKey) || {};
+    _empExtCache.set(cacheKey, { ...existing, analisis });
+    res.json({ analisis });
+  } catch (err) {
+    console.error('Error /api/emp-ext/analisis:', err);
+    res.status(500).json({ error: err.message || 'Error generando análisis.' });
+  }
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`));

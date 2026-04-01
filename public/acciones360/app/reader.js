@@ -8,18 +8,18 @@ const Reader = {
     ticker:           ['ticker', 'símbolo', 'simbolo', 'symbol'],
 
     // P&L
-    ingresos:         ['ingresos totales', 'ingresos ', 'ingresos)', 'ventas netas', 'revenue', 'total revenue', 'net revenue', 'ingresos\n'],
+    ingresos:         ['ingresos totales', 'ingresos', 'ventas netas', 'revenue', 'total revenue', 'net revenue'],
     utilidad_bruta:   ['utilidad bruta', 'ganancia bruta', 'gross profit', 'beneficio bruto'],
-    ebit:             ['ebit ', 'ebit)', 'ebit (', 'utilidad operativa', 'operating income', 'beneficio operativo'],
-    ebitda:           ['ebitda ', 'ebitda)', 'ebitda ('],
+    ebitda:           ['ebitda', 'ebitda ', 'ebitda)', 'ebitda ('],
+    ebit:             ['ebit', 'ebit ', 'ebit)', 'ebit (', 'utilidad operativa', 'operating income', 'beneficio operativo'],
     ganancias_netas:  ['ganancias netas', 'ganancia neta', 'utilidad neta', 'net income', 'net earnings', 'beneficio neto'],
+    margen_ebitda:    ['margen ebitda', 'ebitda margin'],
     margen_bruto:     ['margen beneficio bruto', 'margen bruto', 'gross margin', 'gross profit margin'],
     margen_ebit:      ['margen ebit', 'operating margin', 'margen operativo'],
-    margen_ebitda:    ['margen ebitda', 'ebitda margin'],
     bpa_growth:       ['crecimiento básico del bpa', 'eps growth', 'bpa growth', 'crecimiento bpa', 'earnings growth'],
 
     // Valoración
-    per:              ['per ', 'per)', 'relación per (ltm)', 'p/e)', 'per (ltm)', 'price/earnings', 'pe ratio'],
+    per:              ['relación per (ltm)', 'per (ltm)', 'per ', 'per)', 'per', 'p/e)', 'price/earnings', 'pe ratio'],
     per_fwd:          ['per forward', 'relación per (fwd)', 'per fwd', 'forward pe', 'p/e forward'],
     peg:              ['ratio peg', 'peg ratio', 'peg)'],
     ev:               ['valor de la empresa', 'enterprise value', 'ev (', 've (', 'ev)', 've)'],
@@ -37,15 +37,15 @@ const Reader = {
     capex_margin:     ['margen de gastos de capital', 'capex margin'],
 
     // Retornos
-    roe:              ['roe ', 'rendimiento de capital)', 'roe)', 'return on equity', 'retorno sobre patrimonio'],
-    roa:              ['roa ', 'rendimiento de activos', 'roa)', 'return on assets'],
-    roic:             ['roic ', 'rendimiento del capital invertido', 'roic)', 'return on invested capital', 'retorno capital invertido'],
-    wacc:             ['wacc ', 'wacc)', 'costo de capital', 'weighted average cost'],
+    roic:             ['rendimiento del capital invertido', 'roic', 'roic ', 'roic)', 'return on invested capital', 'retorno capital invertido'],
+    roe:              ['rendimiento de capital', 'roe', 'roe ', 'roe)', 'return on equity', 'retorno sobre patrimonio'],
+    roa:              ['rendimiento de activos', 'roa', 'roa ', 'roa)', 'return on assets'],
+    wacc:             ['wacc', 'wacc ', 'wacc)', 'costo de capital', 'weighted average cost'],
 
     // Balance / Deuda
     equity:           ['capital contable', 'equity)', 'patrimonio neto', 'stockholders equity', 'shareholders equity'],
     deuda_total:      ['deuda total', 'total debt', 'deuda financiera total'],
-    deuda_neta:       ['net debt', 'deuda neta)', 'deuda neta ('],
+    deuda_neta:       ['deuda neta', 'net debt', 'deuda neta)', 'deuda neta ('],
     deuda_neta_ebitda:['deuda neta / ebitda', 'net debt/ebitda', 'deuda neta/ebitda', 'net debt / ebitda'],
     deuda_patrimonio: ['deuda / patrimonio', 'deuda/patrimonio', 'debt/equity', 'd/e ratio'],
     deuda_cp:         ['deuda a corto plazo', 'short-term debt', 'current portion'],
@@ -56,8 +56,8 @@ const Reader = {
     // Scoring / proyecciones
     altman_z:         ['fórmula altman z-score', 'altman z', 'z-score', 'altman zscore'],
     piotroski:        ['puntuación piotroski', 'piotroski f-score', 'piotroski score', 'f-score'],
-    eps_proj:         ['previsiones de bpa', 'eps forecast', 'eps proyectado', 'bpa proyectado', 'forward eps'],
-    revenue_proj:     ['previsión de ingresos', 'revenue forecast', 'ingresos proyectados'],
+    eps_proj:         ['previsiones de bpa (investingpro)', 'previsiones de bpa', 'eps forecast', 'eps proyectado', 'bpa proyectado', 'forward eps'],
+    revenue_proj:     ['previsión de ingresos (investingpro)', 'previsión de ingresos', 'revenue forecast', 'ingresos proyectados'],
     shares:           ['acc. en circulación', 'acciones en circulación', 'shares outstanding', 'diluted shares'],
 
     // Balance adicional — necesario para indicadores CF
@@ -136,12 +136,36 @@ const Reader = {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const data = { empresa: this.extractEmpresa(text), ticker: this.extractTicker(text) };
 
+    // Pre-ordenar campos por longitud del alias más largo (desc) → evita
+    // que 'ebit' capture 'EBITDA', 'roe' capture 'ROIC', etc.
+    const sortedFields = Object.entries(this.FIELD_MAP)
+      .filter(([f]) => f !== 'empresa' && f !== 'ticker')
+      .map(([f, aliases]) => [f, aliases.slice().sort((a, b) => b.length - a.length)])
+      .sort((a, b) => (b[1][0]?.length ?? 0) - (a[1][0]?.length ?? 0));
+
     for (let i = 0; i < lines.length; i++) {
-      const lower = lines[i].toLowerCase();
+      const lower = lines[i].toLowerCase().trim();
       const nextLine = (lines[i + 1] || '');
 
-      for (const [field, aliases] of Object.entries(this.FIELD_MAP)) {
-        if (field === 'empresa' || field === 'ticker') continue;
+      // Primero: coincidencia exacta
+      let matched = false;
+      for (const [field, aliases] of sortedFields) {
+        if (data[field] !== undefined) continue;
+        if (aliases.some(alias => lower === alias.trim())) {
+          const rawVal = this.extractValue(lines[i]) || nextLine.trim();
+          const val = this.parseValue(rawVal);
+          if (val !== null) {
+            data[field] = val;
+            data[`${field}_raw`] = rawVal.trim();
+          }
+          matched = true;
+          break;
+        }
+      }
+      if (matched) continue;
+
+      // Segundo: substring (alias más largos primero)
+      for (const [field, aliases] of sortedFields) {
         if (data[field] !== undefined) continue;
         if (aliases.some(alias => lower.includes(alias))) {
           const rawVal = this.extractValue(lines[i]) || nextLine.trim();

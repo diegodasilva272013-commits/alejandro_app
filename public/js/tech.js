@@ -93,11 +93,86 @@ EPS_CREC_ANUAL: 18
 VENTAS_CRECIMIENTO: 12
 ROE: 28
 INST_PCT: 65
-FLOAT_ACC: 5000000000`;
+FLOAT_ACC: 5000000000
+
+# ── Datos mensuales para tabla comparativa (M-12 → M-1, separados por coma) ──
+# El sistema calcula automáticamente ROA, ROE, Margen EBIT, Asset Turnover,
+# OCF/NI, FCF/NI y Deuda Neta/FCF a partir de estos componentes.
+# Los demás ratios los podés pegar directamente si los tenés.
+GANANCIAS_NETAS_12M: 100,103,107,110,115,118,121,125,129,133,136,140
+ACTIVOS_TOTALES_12M: 800,805,810,815,820,825,830,835,840,845,850,855
+INGRESOS_12M: 500,502,508,515,520,525,530,538,545,552,558,565
+EBIT_12M: 75,77,81,82,83,85,90,92,93,94,95,98
+PATRIMONIO_12M: 400,405,410,415,420,425,430,435,440,445,450,455
+OFC_12M: 110,110,110,111,111,111,111,111,111,111,111,111
+FCF_12M: 100,105,108,110,113,116,117,119,120,121,122,123
+DEUDA_NETA_12M: 150,148,145,143,140,138,135,132,130,129,128,125
+ROIC_12M: 30,31,32,33,34,35,36,37,38,39,40,41
+# Opcionales (si los tenés directos; sino se calculan o se omiten):
+CROIC_12M: 25,26,27,28,29,30,31,32,33,34,35,36
+PER_12M: 28,29,30,30,31,32,33,34,35,36,37,38
+FCF_YIELD_12M: 3,3,3,3,3,3,3,3,3,3,3,3
+CCR_12M: 1.05,1.06,1.08,1.10,1.12,1.14,1.16,1.18,1.20,1.22,1.24,1.25
+BENEISH_12M: -2.3,-2.3,-2.4,-2.4,-2.5,-2.5,-2.6,-2.6,-2.7,-2.7,-2.8,-2.8
+ALTMAN_12M: 4.5,4.6,4.7,4.8,4.9,5.0,5.1,5.2,5.3,5.4,5.5,5.6
+PIOTROSKI_12M: 8,8,8,8,8,8,9,9,9,9,9,9`;
 
 function loadTechExample(){
   document.getElementById('tech-paste-area').value = TECH_EXAMPLE;
   showTechInput();
+}
+
+// Carga automática de series históricas trimestrales desde Yahoo Finance
+function techLoad12M(){
+  var tickerInput = document.getElementById('tech-12m-ticker');
+  var btn         = document.getElementById('tech-12m-btn');
+  var status      = document.getElementById('tech-12m-status');
+  var textarea    = document.getElementById('tech-paste-area');
+
+  // Intentar leer ticker del campo dedicado o del paste-area
+  var ticker = (tickerInput.value || '').trim();
+  if (!ticker) {
+    // extraer del paste si lo hay: buscar ACCION: Apple Inc. (AAPL) → toma lo que está entre paréntesis
+    var paste = textarea.value || '';
+    var m = paste.match(/ACCION\s*:.*?\(([A-Z0-9.\-^]+)\)/i);
+    if (!m) m = paste.match(/TICKER\s*:\s*([A-Z0-9.\-^]+)/i);
+    if (m) ticker = m[1].trim();
+  }
+  if (!ticker) {
+    status.textContent = '⚠ Ingresá el ticker primero.';
+    return;
+  }
+
+  btn.disabled = true;
+  status.textContent = 'Buscando datos en Yahoo Finance…';
+
+  fetch('/api/financials12m/' + encodeURIComponent(ticker))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false;
+      if (!data.ok) {
+        status.textContent = '✗ ' + (data.error || 'Error desconocido');
+        return;
+      }
+      // Armar el bloque de texto para agregar al textarea
+      var lines = ['', '# ── Series históricas trimestrales (Yahoo Finance, más reciente último) ──'];
+      var s = data.series;
+      Object.keys(s).forEach(function(k){
+        if (s[k]) lines.push(k + ': ' + s[k]);
+      });
+      // Agregar al textarea (sin duplicar si ya existen esas claves)
+      var current = textarea.value;
+      // Eliminar cualquier bloque 12M previo
+      current = current.replace(/\n# ── Series históricas[\s\S]*$/m, '').trimEnd();
+      textarea.value = current + lines.join('\n');
+      status.textContent = '✓ Datos cargados (' + ticker + ')';
+      // Re-parsear si ya hay un reporte visible
+      if (typeof parseTechAndRender === 'function') parseTechAndRender();
+    })
+    .catch(function(err){
+      btn.disabled = false;
+      status.textContent = '✗ Error de red: ' + err.message;
+    });
 }
 
 // ══════════════════════════════════════════
@@ -114,7 +189,7 @@ function parseTechData(raw){
     var val = line.slice(idx+1).trim().replace(/\/\/.*$/, '').trim();
     if(val === '') continue;
     var n = parseFloat(val);
-    if(!isNaN(n)) d[key] = n;
+    if(!isNaN(n) && val.indexOf(',') === -1) d[key] = n;
     else d[key] = val;
   }
   return d;
@@ -131,6 +206,66 @@ function fmtN2(v,d){ return v!==null?v.toLocaleString('es',{minimumFractionDigit
 // ══════════════════════════════════════════
 //  MOTOR DE CÁLCULO — 4 METODOLOGÍAS
 // ══════════════════════════════════════════
+function parse12M(d, key){
+  var raw = d[key];
+  if(raw == null) return null;
+  var parts = String(raw).split(',').map(function(v){ return parseFloat(v.trim()); });
+  var vals = parts.filter(function(v){ return !isNaN(v); });
+  return vals.length ? vals : null;
+}
+
+// Construye series 12M: calcula ratios desde componentes crudos
+// o usa valores directos si están disponibles
+function buildSeries12m(d){
+  function zip(a, b, fn){
+    if(!a || !b) return null;
+    var len = Math.min(a.length, b.length), out = [];
+    for(var i=0; i<len; i++)
+      out.push((a[i]!=null && b[i]!=null && b[i]!==0) ? fn(a[i],b[i]) : null);
+    return out.some(function(v){ return v!==null; }) ? out : null;
+  }
+  var gn    = parse12M(d,'GANANCIAS_NETAS_12M');
+  var at    = parse12M(d,'ACTIVOS_TOTALES_12M');
+  var ing   = parse12M(d,'INGRESOS_12M');
+  var ebitM = parse12M(d,'EBIT_12M');
+  var pat   = parse12M(d,'PATRIMONIO_12M');
+  var ofcM  = parse12M(d,'OFC_12M');
+  var fcfM  = parse12M(d,'FCF_12M');
+  var dnM   = parse12M(d,'DEUDA_NETA_12M');
+  var roicM = parse12M(d,'ROIC_12M');
+  var waccN = tNum(d,'WACC');
+
+  var roa      = parse12M(d,'ROA_12M')           || zip(gn, at,    function(a,b){ return a/b*100; });
+  var roe12    = parse12M(d,'ROE_12M')           || zip(gn, pat,   function(a,b){ return a/b*100; });
+  var margenEb = parse12M(d,'MARGEN_EBIT_12M')  || zip(ebitM, ing, function(a,b){ return a/b*100; });
+  var assetT   = parse12M(d,'ASSET_TURNOVER_12M')|| zip(ing, at,   function(a,b){ return a/b; });
+  var ocfNI    = parse12M(d,'OCF_NETINCOME_12M') || zip(ofcM, gn,  function(a,b){ return a/b; });
+  var fcfNI    = parse12M(d,'FCF_NETINCOME_12M') || zip(fcfM, gn,  function(a,b){ return a/b; });
+  var dnFcf    = parse12M(d,'DN_FCF_12M')       || zip(dnM, fcfM,  function(a,b){ return a/b; });
+  var roicWacc = parse12M(d,'ROIC_WACC_12M');
+  if(!roicWacc && roicM && waccN !== null)
+    roicWacc = roicM.map(function(r){ return r !== null ? r - waccN : null; });
+
+  return {
+    roa:          roa,
+    roic:         roicM,
+    roe:          roe12,
+    croic:        parse12M(d,'CROIC_12M'),
+    per:          parse12M(d,'PER_12M'),
+    fcfYield:     parse12M(d,'FCF_YIELD_12M'),
+    ccr:          parse12M(d,'CCR_12M'),
+    assetTurnover:assetT,
+    beneish:      parse12M(d,'BENEISH_12M'),
+    ocfNI:        ocfNI,
+    fcfNI:        fcfNI,
+    dnFcf:        dnFcf,
+    margenEbit:   margenEb,
+    altman:       parse12M(d,'ALTMAN_12M'),
+    piotroski:    parse12M(d,'PIOTROSKI_12M'),
+    roicWacc:     roicWacc
+  };
+}
+
 function calcTech(d){
 
   var precio   = tNum(d,'PRECIO_ACTUAL');
@@ -515,7 +650,8 @@ function calcTech(d){
     rsLine, rsLineOk, sector, sectorTend, sectorOk,
     epsQTrim, epsQOk, epsAnual, epsAOk,
     ventasCr, ventasOk, roe, roeOk, instPct, instOk, floatAcc,
-    canslimChecks, canslimScore, canslimTotal
+    canslimChecks, canslimScore, canslimTotal,
+    series12m: buildSeries12m(d)
   };
 }
 
@@ -1169,8 +1305,114 @@ function renderTechDash(c){
     +'</div>'
     +'</div>';
 
-  // ══ 7. CIERRE ══
-  html += '<div class="tech-close">'
+  // ══ 7. TABLA 12 MESES ══
+  var s12 = c.series12m;
+  var hasSeries = s12 && Object.keys(s12).some(function(k){ return s12[k] !== null; });
+  if(hasSeries){
+    // Determina cuántos meses hay (máximo disponible)
+    var nMeses = 0;
+    Object.keys(s12).forEach(function(k){ if(s12[k] && s12[k].length > nMeses) nMeses = s12[k].length; });
+    if(nMeses > 12) nMeses = 12;
+
+    // Cabeceras de columna M-N … M-1
+    var mHeaders = '';
+    for(var m = nMeses; m >= 1; m--) mHeaders += '<th style="min-width:54px;text-align:center;padding:7px 4px;font-size:10px;font-family:Space Mono,monospace;color:#6A829E;font-weight:400;letter-spacing:.02em;white-space:nowrap">M-'+m+'</th>';
+
+    // Helper: dot signal
+    function dot12(val, hiGood, loGood, loBad, hiBad){
+      // hiGood/loGood: thresholds for green; loBad/hiBad: thresholds for red
+      // hiGood = null → only lower bound matters; loBad = null → only upper bound matters
+      var clr;
+      if(hiGood !== null && val >= hiGood) clr = '#22c55e';
+      else if(loGood !== null && val >= loGood) clr = '#22c55e';
+      else if(hiBad !== null && val <= hiBad)   clr = '#ef4444';
+      else if(loBad !== null && val <= loBad)   clr = '#ef4444';
+      else clr = '#f59e0b';
+      return '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+clr+';margin-left:3px;vertical-align:middle;flex-shrink:0"></span>';
+    }
+
+    // Definición de cada ratio: [label, seriesKey, formatFn, signalFn(val)→color]
+    var ratiosDef = [
+      { label:'ROA %',             key:'roa',          fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=10?'g':v>=5?'a':'r'; } },
+      { label:'ROIC %',            key:'roic',         fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=15?'g':v>=8?'a':'r'; } },
+      { label:'ROE %',             key:'roe',          fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=17?'g':v>=10?'a':'r'; } },
+      { label:'CROIC %',           key:'croic',        fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=10?'g':v>=5?'a':'r'; } },
+      { label:'PER',               key:'per',          fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v<=20?'g':v<=30?'a':'r'; } },
+      { label:'FCF Yield %',       key:'fcfYield',     fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=4?'g':v>=2?'a':'r'; } },
+      { label:'CCR',               key:'ccr',          fmt:function(v){ return v.toFixed(2); },          sig:function(v){ return v>=1.2?'g':v>=1.0?'a':'r'; } },
+      { label:'Asset Turnover',    key:'assetTurnover',fmt:function(v){ return v.toFixed(2); },          sig:function(v){ return v>=0.8?'g':v>=0.5?'a':'r'; } },
+      { label:'Beneish M-Score',   key:'beneish',      fmt:function(v){ return v.toFixed(1); },          sig:function(v){ return v<=-2.22?'g':v<=-1.78?'a':'r'; } },
+      { label:'OCF / Net Income',  key:'ocfNI',        fmt:function(v){ return v.toFixed(2); },          sig:function(v){ return v>=1.0?'g':v>=0.7?'a':'r'; } },
+      { label:'FCF / Net Income',  key:'fcfNI',        fmt:function(v){ return v.toFixed(2); },          sig:function(v){ return v>=0.8?'g':v>=0.5?'a':'r'; } },
+      { label:'Deuda Neta / FCF',  key:'dnFcf',        fmt:function(v){ return v.toFixed(1); },          sig:function(v){ return v<=2?'g':v<=4?'a':'r'; } },
+      { label:'Margen EBIT %',     key:'margenEbit',   fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=15?'g':v>=8?'a':'r'; } },
+      { label:'Altman Z-Score',    key:'altman',       fmt:function(v){ return v.toFixed(1); },          sig:function(v){ return v>=3?'g':v>=1.81?'a':'r'; } },
+      { label:'Piotroski',         key:'piotroski',    fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>=7?'g':v>=4?'a':'r'; } },
+      { label:'ROIC \u2013 WACC %',key:'roicWacc',    fmt:function(v){ return v.toFixed(0); },          sig:function(v){ return v>0?'g':v===0?'a':'r'; } }
+    ];
+
+    var dotClr = { g:'#22c55e', a:'#f59e0b', r:'#ef4444' };
+
+    var tableRows = '';
+    ratiosDef.forEach(function(def){
+      var serie = s12[def.key];
+      if(!serie) return;
+      // serie[0] = more distant month, serie[last] = M-1 (most recent)
+      // Columns go M-nMeses ... M-1 → indices nMeses-1 ... 0? 
+      // Actually we want to show oldest first: M-12 … M-1
+      // Input order: serie[0]=M-12, serie[last]=M-1 if nMeses=length
+      var cells = '';
+      var padded = serie.slice(0); // oldest first
+      // If fewer than nMeses values, left-pad with null
+      while(padded.length < nMeses) padded.unshift(null);
+      for(var ci = 0; ci < nMeses; ci++){
+        var v = padded[ci];
+        if(v === null){
+          cells += '<td style="text-align:center;padding:6px 4px;color:#4A5568;font-size:11px">\u2014</td>';
+        } else {
+          var s = def.sig(v);
+          var dc = dotClr[s];
+          cells += '<td style="text-align:center;padding:6px 4px">'
+            +'<span style="display:inline-flex;align-items:center;justify-content:center;gap:2px;font-family:Space Mono,monospace;font-size:11px;color:#D8E6F5;white-space:nowrap">'
+            +def.fmt(v)
+            +'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+dc+'"></span>'
+            +'</span></td>';
+        }
+      }
+      tableRows += '<tr style="border-bottom:1px solid rgba(26,86,196,.1)">'
+        +'<td style="padding:7px 12px 7px 0;color:#8FA8C8;font-size:11px;font-weight:500;white-space:nowrap;position:sticky;left:0;background:#080E1A;z-index:1">'+def.label+'</td>'
+        +cells
+        +'</tr>';
+    });
+
+    html += '<div class="tech-section rv">'
+      +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">'
+      +'<div class="tech-sec-eyebrow">\ud83d\udcca Ratios Hist\u00f3ricos</div>'
+      +'</div>'
+      +'<h2 class="tech-sec-title">\ud83d\udcc8 Tabla Completa <span>('+nMeses+' Meses)</span></h2>'
+      +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(26,86,196,.2);border-radius:10px;background:#080E1A">'
+      +'<table style="width:100%;border-collapse:collapse;min-width:640px">'
+      +'<thead>'
+      +'<tr style="background:#0D1B3E;border-bottom:1px solid rgba(26,86,196,.3)">'
+      +'<th style="text-align:left;padding:9px 12px 9px 0;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#6A829E;position:sticky;left:0;background:#0D1B3E;z-index:2;white-space:nowrap">Ratio</th>'
+      +mHeaders
+      +'</tr>'
+      +'</thead>'
+      +'<tbody>'
+      +tableRows
+      +'</tbody>'
+      +'</table>'
+      +'</div>'
+      +'<div style="margin-top:10px;display:flex;gap:18px;font-size:10px;color:#6A829E">'
+      +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px"></span>Saludable</span>'
+      +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px"></span>Neutro</span>'
+      +'<span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px"></span>Alerta</span>'
+      +'</div>'
+      +'</div>';
+  }
+
+  // ══ 8. CIERRE ══
+  html += '<div class="tech-close">' 
     +'<div class="tech-close-score">'+c.confPct+'%</div>'
     +'<div class="tech-close-sub">Confluencia de las 4 metodologías — '+c.accion+'</div>'
     +'<div style="display:flex;justify-content:center;gap:40px;margin-top:32px;flex-wrap:wrap">'

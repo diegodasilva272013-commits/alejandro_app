@@ -6,6 +6,7 @@
 <title>Círculo Azul Finanzas — Check List Indicadores</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
 /* ── Buscador de empresa ── */
 .empresa-search-wrap{position:relative;margin-bottom:16px}
@@ -267,6 +268,17 @@
         <div class="lmc-cta" style="color:#5A9BFF">Abrir módulo →</div>
       </div>
 
+      <!-- Empresas Extraordinarias -->
+      <a href="/empresas-extraordinarias/" style="text-decoration:none">
+        <div class="land-module-card" style="border-color:rgba(46,204,113,.35);background:rgba(46,204,113,.04)">
+          <div class="lmc-icon">🏆</div>
+          <div class="lmc-tag" style="color:#2ECC71">PROTOCOLO IA · 20 INDICADORES</div>
+          <div class="lmc-title" style="color:#2ECC71">Empresas Extraordinarias</div>
+          <div class="lmc-desc">Ticker → Claude busca datos reales → evalúa ROIC, FCF, Piotroski, Altman Z y 16 más → semáforo + score 0–100 + análisis narrativo.</div>
+          <div class="lmc-cta" style="color:#2ECC71">Abrir módulo →</div>
+        </div>
+      </a>
+
       <!-- ROImp -->
       <a href="/roimp/" style="text-decoration:none">
         <div class="land-module-card" style="border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.04)">
@@ -377,53 +389,18 @@
     <p class="input-sub">Pegá los datos siguiendo el formato de ejemplo.</p>
   </div>
 
-  <div class="template-box">
-    <div class="template-label">Formato requerido</div>
-    <div class="template-hint">ACCION: NOMBRE S.A. (TICKER)
-COSTO: 25000
-PROYECCION: 12 meses
-RIESGO: Medio
-MONEDA: USD millones
-
-INGRESOS: 5000, 5400, 5900, 6500, 7200
-UTILIDAD_BRUTA: 2400, 2650, 2950, 3350, 3820
-GANANCIAS_NETAS: 1100, 1250, 1400, 1600, 1850
-EBIT: 1700, 1850, 2050, 2300, 2650
-EBITDA: 2100, 2300, 2550, 2900, 3300
-OFC: 1500, 1650, 1850, 2150, 2450
-CAPEX: 400, 420, 450, 500, 550
-FCF: 1100, 1230, 1400, 1650, 1900
-BPA: 3.00, 3.40, 3.85, 4.40, 5.00
-EQUITY: 8700, 9200, 9600, 10000
-ACTIVOS_TOTALES: 14000
-ACTIVOS_CORRIENTES: 7800
-PASIVOS_CORRIENTES: 3200
-INVENTARIOS: 500
-PP&E: 6000
-DEUDA_TOTAL: 1500
-DEUDA_CP: 300
-CAJA: 5500
-GASTO_INTERESES: 100
-
-EV: 20000
-PER: 18
-PEG: 0.90
-WACC: 9
-ROE: 24
-ROIC: 19, 20, 21, 21.5, 22
-ROA: 16
-
-FCF_SIN_APAL: 2200
-FCF_APAL: 1900
-MARGEN_CAPEX: 7.64
-ALTMAN: 3.4
-PIOTROSKI: 8
-
-ALERTAS: Liquidity management actions amid a Challenging macro environment. No immediate Refinancing required. Cost optimización inititives.</div>
-  </div>
-
   <!-- ── Buscador de empresa ── -->
   <div id="ca-search-checklist"></div>
+
+  <input type="text" id="inp-empresa" placeholder="Nombre de la empresa (ej: Apple Inc.)" style="width:100%;padding:.65rem 1rem;background:rgba(255,255,255,.05);border:1px solid rgba(26,86,196,.25);border-radius:8px;color:#D8E6F5;font-size:.9rem;font-family:inherit;margin-bottom:.65rem;outline:none;box-sizing:border-box">
+
+  <!-- Zona de carga de archivo -->
+  <div id="cl-drop-zone" onclick="document.getElementById('cl-file-input').click()" style="border:2px dashed rgba(90,155,255,.35);border-top:2px solid rgba(26,86,196,.6);border-radius:12px;padding:1.4rem 2rem;text-align:center;background:#080E1A;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:.65rem">
+    <div style="font-size:1.6rem;margin-bottom:.3rem">📄</div>
+    <div style="color:#D8E6F5;font-weight:600;font-size:.88rem;margin-bottom:.2rem">Subir archivo .docx</div>
+    <div style="color:#8FA8C8;font-size:.75rem;line-height:1.5">Arrastre o haga clic para seleccionar</div>
+    <input type="file" id="cl-file-input" accept=".docx" style="display:none">
+  </div>
 
   <textarea class="paste-area" id="paste-area" placeholder="Pegá aquí tus datos financieros..."></textarea>
   <div class="parse-error" id="parse-error"></div>
@@ -682,6 +659,7 @@ FLOAT_ACC: 5000000000           (float de acciones en circulación)</div>
 
   <div id="ca-search-tecnico"></div>
   <textarea class="paste-area" id="tech-paste-area" placeholder="Pegá aquí los datos del activo para análisis técnico..."></textarea>
+
   <div class="parse-error" id="tech-parse-error"></div>
   <div class="parse-ok"    id="tech-parse-ok"></div>
 
@@ -771,9 +749,9 @@ FLOAT_ACC: 5000000000           (float de acciones en circulación)</div>
   </div>
 </div>
 
-<script src="/js/app.js?v=202603207"></script>
-<script src="/js/tech.js?v=202603207"></script>
-<script src="/js/empresa-search.js"></script>
+<script src="/js/app.js?v=20260330"></script>
+<script src="/js/tech.js?v=20260331"></script>
+<script src="/js/empresa-search.js?v=20260331"></script>
 <script>
   EmpresaSearch.init({ wrapperId: 'ca-search-checklist', textareaId: 'paste-area',      formato: 'checklist' });
   EmpresaSearch.init({ wrapperId: 'ca-search-tecnico',   textareaId: 'tech-paste-area', formato: 'checklist' });

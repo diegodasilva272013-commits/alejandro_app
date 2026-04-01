@@ -2,47 +2,56 @@
 const FinancialParser = {
 
   FIELD_MAP: {
-    ev:                ["valor de la empresa", "enterprise value", "ve)", "ev)", "ve (", "ev ("],
-    ebit:              ["ebit)"],
+    ev:                ["valor de la empresa (ve)", "valor de la empresa", "enterprise value", "ve)", "ev)", "ve (", "ev ("],
+    ebitda:            ["ebitda", "ebitda)"],
+    ebit:              ["ebit", "ebit)"],
     ev_ebit:           ["ve/ebit", "ev/ebit", "ve / ebit", "ev / ebit"],
-    wacc:              ["wacc"],
+    wacc:              ["wacc", "costo de capital", "weighted average cost"],
     roic:              ["rendimiento del capital invertido", "roic", "retorno sobre capital invertido"],
     fcf:               ["flujo de caja libre neto", "free cash flow", "fcf apalancado", "flujo de caja libre"],
     fcf_yield:         ["rendimiento de flujo de caja libre", "fcf yield", "fcf yeild"],
     ev_fcf:            ["ve / flujo de caja libre", "ev/fcf", "ve/fcf"],
-    margen_ebit:       ["margen ebit"],
-    ebitda:            ["ebitda)"],
     margen_ebitda:     ["margen ebitda"],
-    per:               ["per)", "relación per (ltm)", "p/e"],
+    margen_ebit:       ["margen ebit"],
+    per:               ["per", "per)", "relación per (ltm)", "p/e"],
     per_fwd:           ["relación per (fwd)", "per fwd", "per forward"],
     peg:               ["ratio peg", "peg"],
-    roe:               ["rendimiento de capital)", "roe", "return on equity"],
+    roe:               ["rendimiento de capital", "roe", "rendimiento de capital)", "return on equity"],
     roa:               ["rendimiento de activos", "roa"],
     equity:            ["capital contable", "equity", "patrimonio neto"],
     deuda_total:       ["deuda total"],
-    deuda_neta:        ["deuda neta)"],
+    deuda_neta:        ["deuda neta", "deuda neta)", "net debt"],
     deuda_neta_ebitda: ["deuda neta / ebitda", "deuda neta/ebitda"],
     icr:               ["ratio de cobertura de intereses", "icr", "interest coverage"],
     deuda_patrimonio:  ["deuda / patrimonio", "deuda/patrimonio"],
     deuda_cp:          ["deuda a corto plazo"],
+    deuda_lp:          ["deuda a largo plazo"],
     fcf_margin_apal:   ["margen de flujo de caja libre apalancado", "fcf levered margin"],
     fcf_margin_unapal: ["margen de flujo de caja libre sin apalancamiento", "fcf unlev margin"],
     capex:             ["gastos de capital", "capex"],
     capex_margin:      ["margen de gastos de capital"],
-    ingresos:          ["ingresos)", "ingresos totales", "ingresos\n"],
+    ingresos:          ["ingresos totales", "ingresos", "ventas netas"],
     utilidad_bruta:    ["utilidad bruta"],
     ganancias_netas:   ["ganancias netas"],
-    margen_bruto:      ["margen beneficio bruto"],
-    margen_neto:       ["ingresos netos margen accionistas", "ingresos netos margen", "margen neto", "net profit margin"],
+    margen_bruto:      ["margen beneficio bruto", "margen bruto"],
+    margen_neto:       ["ingresos netos margen accionistas", "margen neto", "net profit margin"],
     cash_ops:          ["efectivo de las operaciones"],
     bpa_growth:        ["crecimiento básico del bpa"],
-    eps_proj:          ["previsiones de bpa"],
-    revenue_proj:      ["previsión de ingresos"],
+    eps_proj:          ["previsiones de bpa (investingpro)", "previsiones de bpa"],
+    revenue_proj:      ["previsión de ingresos (investingpro)", "previsión de ingresos"],
     shares:            ["acc. en circulación", "acciones en circulación"],
     altman_z:          ["fórmula altman z-score", "altman z"],
     piotroski:         ["puntuación piotroski"],
-    current_ratio:     ["ratio de solvencia"],
+    current_ratio:     ["ratio de solvencia", "current ratio"],
     quick_ratio:       ["prueba ácida"],
+    da:                ["depreciación y amortización"],
+    efectivo_bg:       ["efectivo neto (ben graham)"],
+    gbpta:             ["beneficio bruto / activos totales"],
+    ppe_brutos:        ["propiedad, planta y equipo brutos"],
+    beneish:           ["fórmula beneish m-score"],
+    caja:              ["efectivo y equivalentes"],
+    capital_total:     ["capital total"],
+    asset_turnover:    ["rotación de activos"],
   },
 
   parseValue(raw) {
@@ -76,11 +85,35 @@ const FinancialParser = {
     const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
     const data = {};
 
+    // Pre-ordenar por longitud del alias más largo (desc) → evita que 'ebit'
+    // capture 'EBITDA', 'deuda neta' capture 'Deuda neta / EBITDA', etc.
+    const sortedFields = Object.entries(this.FIELD_MAP)
+      .map(([f, aliases]) => [f, aliases.slice().sort((a, b) => b.length - a.length)])
+      .sort((a, b) => (b[1][0]?.length ?? 0) - (a[1][0]?.length ?? 0));
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].toLowerCase();
       const nextLine = lines[i + 1] || "";
 
-      for (const [field, aliases] of Object.entries(this.FIELD_MAP)) {
+      // Primero: coincidencia exacta
+      let matched = false;
+      for (const [field, aliases] of sortedFields) {
+        if (data[field] !== undefined) continue;
+        if (aliases.some(alias => line === alias)) {
+          const raw = this.extractValueFromLine(lines[i]) || nextLine;
+          const val = this.parseValue(raw);
+          if (val !== null) {
+            data[field] = val;
+            data[`${field}_raw`] = raw.trim();
+          }
+          matched = true;
+          break;
+        }
+      }
+      if (matched) continue;
+
+      // Segundo: substring (alias más largos primero)
+      for (const [field, aliases] of sortedFields) {
         if (data[field] !== undefined) continue;
         if (aliases.some(alias => line.includes(alias))) {
           const raw = this.extractValueFromLine(lines[i]) || nextLine;
