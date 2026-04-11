@@ -3081,7 +3081,7 @@ Consenso de analistas (Buy/Hold/Sell), precio objetivo promedio, principales cas
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// MÓDULO PROTOCOLO EMPRESAS INFRAVALORADAS TRIMESTRAL — Claude + web_search
+// MÓDULO PROTOCOLO EMPRESAS INFRAVALORADAS TRIMESTRAL — OpenAI GPT-4o
 // ═════════════════════════════════════════════════════════════════════════════
 
 const _infraCache = new Map();
@@ -3090,8 +3090,8 @@ app.post('/api/infravaloradas/analizar', requireAuth, iaLimiter, async (req, res
   const { ticker } = req.body || {};
   if (!ticker) return res.status(400).json({ error: 'ticker requerido' });
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY no configurada.' });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'API key de OpenAI no configurada en el servidor.' });
 
   const cleanTicker = ticker.toUpperCase().trim().slice(0, 6);
   const cacheKey = `${cleanTicker}_${new Date().toISOString().slice(0, 10)}`;
@@ -3103,9 +3103,9 @@ Tu tarea es aplicar el "Protocolo Empresas Infravaloradas Trimestral"
 para la empresa con ticker: ${cleanTicker}.
 
 INSTRUCCIONES:
-1. Usá web_search para buscar datos financieros reales y actualizados
+1. Usá tu conocimiento financiero para proporcionar datos reales
    de los últimos 12 trimestres de la empresa.
-2. Buscá en fuentes confiables: SEC EDGAR, Yahoo Finance, Macrotrends,
+2. Basate en fuentes confiables: SEC EDGAR, Yahoo Finance, Macrotrends,
    Stockanalysis.com, reportes de earnings oficiales, investor relations.
 3. NUNCA inventar datos. Si un dato no está disponible, marcarlo como "N/D".
 4. Respondé ÚNICAMENTE con un objeto JSON válido con la estructura indicada.
@@ -3248,35 +3248,24 @@ Escribí TODO en español.`;
 
   const userPrompt = `Ejecutá el Protocolo Empresas Infravaloradas Trimestral para: ${cleanTicker}
 
-Buscá datos financieros REALES de los últimos 12 trimestres. Usá web_search para cada dato.
+Proporcioná datos financieros REALES de los últimos 12 trimestres.
 Respondé SOLO con el JSON, sin texto adicional.`;
 
   try {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey });
+    const { OpenAI } = require('openai');
+    const openai = new OpenAI({ apiKey });
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 16000,
-      tools: [
-        {
-          type: 'web_search_20250305',
-          name: 'web_search',
-          max_uses: 15
-        }
-      ],
-      system: systemPrompt,
+      response_format: { type: 'json_object' },
       messages: [
-        { role: 'user', content: userPrompt }
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt }
       ]
     });
 
-    // Extract the JSON from the response
-    const textBlocks = (response.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text);
-
-    let textoRespuesta = textBlocks.join('');
+    let textoRespuesta = completion.choices?.[0]?.message?.content || '{}';
 
     // Clean possible markdown backticks
     textoRespuesta = textoRespuesta
