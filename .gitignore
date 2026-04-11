@@ -6,3 +6,5 @@ __pycache__/
 files/
 *.log
 .claude/
+
+.fake

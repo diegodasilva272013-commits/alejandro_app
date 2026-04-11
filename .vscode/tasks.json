@@ -1,0 +1,30 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "git commit and push",
+			"type": "shell",
+			"command": "git add . && git commit -m \"feat: agregar módulo Protocolo Empresas Infravaloradas Trimestral\" && git push"
+		},
+		{
+			"label": "git-commit-push",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\diego\\OneDrive\\Desktop\\Alejandro app\" && git add . && git commit -m \"feat: agregar módulo Protocolo Empresas Infravaloradas Trimestral\" && git push"
+		},
+		{
+			"label": "git-commit-push",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\diego\\OneDrive\\Desktop\\Alejandro app\" && git add . && git commit -m \"feat: agregar módulo Protocolo Empresas Infravaloradas Trimestral\" && git push"
+		},
+		{
+			"label": "git-push",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\diego\\OneDrive\\Desktop\\Alejandro app\" && git add . && git commit -m \"feat: agregar módulo Protocolo Empresas Infravaloradas Trimestral\" && git push"
+		},
+		{
+			"label": "git-push-now",
+			"type": "shell",
+			"command": "cd \"c:\\Users\\diego\\OneDrive\\Desktop\\Alejandro app\" && git add . && git commit -m \"feat: agregar módulo Protocolo Empresas Infravaloradas Trimestral\" && git push"
+		}
+	]
+}

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocolo Empresas Infravaloradas — Círculo Azul Finanzas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#05080F;color:#fff;font-family:'Inter',sans-serif;min-height:100vh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#1A56C4;border-radius:2px}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:54px;background:rgba(5,8,15,.97);
+  border-bottom:1px solid rgba(90,155,255,.2);display:flex;align-items:center;
+  padding:0 28px;gap:16px;z-index:999;backdrop-filter:blur(10px)}
+.back-btn{color:#8FA8C8;font-size:12px;text-decoration:none;border:1px solid rgba(90,155,255,.2);
+  padding:5px 12px;border-radius:5px;transition:.2s}
+.back-btn:hover{color:#fff;border-color:rgba(90,155,255,.5)}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700}
+.topbar-tag{font-size:10px;font-weight:600;letter-spacing:.12em;color:#14b8a6;
+  background:rgba(20,184,166,.1);border:1px solid rgba(20,184,166,.25);
+  padding:3px 9px;border-radius:20px}
+.topbar-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.topbar-actions button{background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);
+  padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.2s}
+.topbar-actions button:hover{border-color:rgba(90,155,255,.5);color:#fff}
+.topbar-actions .btn-pdf-top{background:linear-gradient(135deg,#1A56C4,#1A4FAA);border:none;color:#fff;padding:5px 14px}
+.topbar-actions .btn-pdf-top:hover{box-shadow:0 4px 16px rgba(26,86,196,.4)}
+
+/* MAIN WRAP */
+.wrap{padding:74px 28px 60px;max-width:1440px;margin:0 auto}
+
+/* SEARCH AREA */
+.search-area{text-align:center;padding:48px 0 40px}
+.search-area h1{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;margin-bottom:8px}
+.search-area h1 span{color:#14b8a6}
+.search-area p{color:#8FA8C8;font-size:14px;margin-bottom:28px;line-height:1.6}
+.search-row{display:flex;gap:8px;max-width:460px;margin:0 auto}
+.search-row input{flex:1;background:#0D1627;border:1px solid rgba(20,184,166,.3);border-radius:8px;
+  padding:12px 16px;color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none;
+  text-transform:uppercase;letter-spacing:.1em}
+.search-row input::placeholder{text-transform:none;letter-spacing:normal}
+.search-row input:focus{border-color:#14b8a6}
+.search-row button{background:linear-gradient(135deg,#0d9488,#14b8a6);border:none;border-radius:8px;
+  padding:12px 24px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.03em;transition:.2s}
+.search-row button:hover{box-shadow:0 4px 20px rgba(20,184,166,.4);transform:translateY(-1px)}
+.search-row button:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+#errMsg{color:#E74C3C;font-size:13px;margin-top:12px;display:none}
+.input-hint{color:#4A5568;font-size:11px;margin-top:10px}
+
+/* SPINNER */
+#spinner{display:none;flex-direction:column;align-items:center;gap:16px;padding:48px 0}
+.spin{width:44px;height:44px;border:3px solid rgba(20,184,166,.15);border-top-color:#14b8a6;
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-msg{color:#8FA8C8;font-size:13px;text-align:center;line-height:1.6}
+.spin-sub{color:#4A5568;font-size:11px;margin-top:4px}
+
+/* RESULTS */
+#resultsSection{display:none}
+
+/* ══ CONCLUSION RAPIDA ══ */
+.conclusion-card{background:#0D1627;border:1px solid rgba(20,184,166,.2);border-radius:12px;
+  padding:24px 28px;margin-bottom:24px;border-left:4px solid #14b8a6}
+.conclusion-card.verde{border-left-color:#16a34a}
+.conclusion-card.amarillo{border-left-color:#d97706}
+.conclusion-card.rojo{border-left-color:#dc2626}
+.conclusion-header{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:#14b8a6;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.veredicto-principal{font-size:20px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:12px}
+.veredicto-principal.verde{color:#16a34a}
+.veredicto-principal.amarillo{color:#d97706}
+.veredicto-principal.rojo{color:#dc2626}
+.veredicto-subtitulo{color:#8FA8C8;font-size:13px;margin-bottom:14px;font-style:italic}
+.conclusion-puntos{list-style:none;padding:0;margin:0 0 14px}
+.conclusion-puntos li{padding:5px 0;font-size:13px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.conclusion-puntos li .cp-icon{flex-shrink:0;font-size:14px}
+.conclusion-puntos .cp-verde{color:#16a34a}
+.conclusion-puntos .cp-amarillo{color:#d97706}
+.conclusion-puntos .cp-rojo{color:#dc2626}
+.conclusion-cierre{font-size:14px;font-weight:600;color:#C4D4EA;padding:10px 0;border-top:1px solid rgba(90,155,255,.1);margin-top:8px}
+.conclusion-aclaracion{color:#6A829E;font-size:12px;margin-top:4px;font-style:italic}
+
+/* ══ TABLA MAESTRA ══ */
+.tabla-section{margin-bottom:24px}
+.tabla-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.tabla-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700}
+.tabla-sub{font-size:12px;color:#6A829E;margin-top:2px}
+.tabla-unidades{background:#0D1627;border:1px solid rgba(90,155,255,.1);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#6A829E;line-height:1.6}
+.tabla-nota{font-size:11px;color:#4A5568;margin-bottom:8px;font-style:italic}
+.tabla-fuentes{font-size:11px;color:#5A9BFF;margin-bottom:12px}
+.legend{display:flex;gap:14px;align-items:center}
+.legend span{font-size:11px;color:#8FA8C8;display:flex;align-items:center;gap:5px}
+.ld{width:9px;height:9px;border-radius:2px;display:inline-block}
+.ld-g{background:#16a34a}.ld-a{background:#d97706}.ld-r{background:#dc2626}.ld-n{background:#4A5568}
+
+.tbl-wrap{overflow-x:auto;border-radius:10px;border:1px solid rgba(90,155,255,.1);scrollbar-width:thin}
+table{border-collapse:collapse;width:100%;min-width:900px;white-space:nowrap}
+thead th{background:#142035;color:#8FA8C8;font-size:10px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;padding:9px 10px;border-bottom:1px solid rgba(90,155,255,.15);
+  text-align:right;position:sticky;top:0;z-index:2}
+thead th:first-child{text-align:left;min-width:185px;position:sticky;left:0;z-index:3;background:#142035}
+tbody td{padding:7px 10px;font-size:12px;border-bottom:1px solid rgba(90,155,255,.05);text-align:right;
+  font-family:'Space Mono',monospace;transition:background .15s}
+tbody td:first-child{text-align:left;font-family:'Inter',sans-serif;font-weight:600;color:#C4D4EA;
+  position:sticky;left:0;background:#0a1020;z-index:1;font-size:12px}
+tbody tr:nth-child(even) td{background:rgba(13,22,39,.5)}
+tbody tr:nth-child(even) td:first-child{background:#0d1525}
+tbody tr:hover td{background:rgba(20,184,166,.06)}
+tbody tr:hover td:first-child{background:rgba(20,184,166,.08)}
+.val-cell{position:relative;padding-right:20px!important}
+.color-dot{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%}
+.dot-verde{background:#16a34a;box-shadow:0 0 5px rgba(22,163,74,.5)}
+.dot-amarillo{background:#d97706;box-shadow:0 0 5px rgba(217,119,6,.4)}
+.dot-rojo{background:#dc2626;box-shadow:0 0 5px rgba(220,38,38,.4)}
+.dot-na{background:#4A5568}
+td.nd-cell{color:#4A5568;font-size:10px}
+
+/* ══ LECTURA PROFESIONAL ══ */
+.lectura-section{margin-bottom:24px}
+.lectura-title{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:700;margin-bottom:16px}
+.lectura-intro{color:#8FA8C8;font-size:14px;margin-bottom:20px;line-height:1.6;font-style:italic}
+.bloque-card{background:#0D1627;border:1px solid rgba(90,155,255,.15);border-radius:12px;
+  margin-bottom:16px;overflow:hidden}
+.bloque-header{padding:14px 20px;display:flex;align-items:center;gap:12px;
+  border-bottom:1px solid rgba(90,155,255,.1)}
+.bloque-header.verde{background:rgba(22,163,74,.08);border-bottom-color:rgba(22,163,74,.2)}
+.bloque-header.amarillo{background:rgba(217,119,6,.08);border-bottom-color:rgba(217,119,6,.2)}
+.bloque-header.rojo{background:rgba(220,38,38,.08);border-bottom-color:rgba(220,38,38,.2)}
+.bloque-num{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:#5A9BFF;
+  background:rgba(90,155,255,.15);width:28px;height:28px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bloque-icon{font-size:18px}
+.bloque-titulo{font-weight:700;font-size:14px;color:#D8E6F5;letter-spacing:.03em}
+.bloque-body{padding:18px 20px}
+.bloque-contenido{color:#C4D4EA;font-size:13px;line-height:1.75;white-space:pre-line}
+.bloque-highlight{margin-top:14px;padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;
+  display:flex;align-items:center;gap:8px}
+.bloque-highlight.verde{background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.25);color:#22c55e}
+.bloque-highlight.amarillo{background:rgba(217,119,6,.1);border:1px solid rgba(217,119,6,.25);color:#f59e0b}
+.bloque-highlight.rojo{background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.25);color:#ef4444}
+
+/* NEW ANALYSIS BTN */
+.btn-nuevo{display:inline-flex;align-items:center;gap:8px;background:transparent;
+  border:1px solid rgba(20,184,166,.4);color:#14b8a6;padding:10px 24px;border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:.2s;margin-top:12px}
+.btn-nuevo:hover{background:rgba(20,184,166,.08);border-color:#14b8a6}
+
+/* HISTORIAL PANEL */
+#hist-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1100}
+#hist-panel{position:fixed;top:0;right:-440px;width:420px;max-width:96vw;height:100vh;
+  background:#080E1A;border-left:1px solid rgba(26,86,196,.3);z-index:1101;
+  transition:right .3s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column}
+.hist-header{padding:1.1rem 1.2rem;border-bottom:1px solid rgba(26,86,196,.2);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hist-header span{font-size:.9rem;font-weight:700;color:#D8E6F5}
+.hist-close{background:none;border:none;color:#3d5a7a;font-size:1.2rem;cursor:pointer;padding:.2rem .4rem}
+#hist-list{flex:1;overflow-y:auto;padding:1rem}
+
+/* TOAST */
+#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(8px);
+  background:#0d9488;color:#fff;padding:.55rem 1.2rem;border-radius:8px;font-size:.82rem;
+  font-weight:600;z-index:2000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+  .search-area h1{font-size:26px}
+  .topbar-actions{gap:4px}
+  .topbar-actions button{font-size:10px;padding:4px 8px}
+  .conclusion-card{padding:16px 18px}
+}
+
+/* PRINT */
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .topbar,.no-print,#hist-overlay,#hist-panel,#toast{display:none!important}
+  .wrap{padding:10px 20px}
+  body{background:#fff!important;color:#1e293b!important}
+  .search-area{display:none!important}
+  #spinner{display:none!important}
+  .conclusion-card{background:#f8faff!important;border-color:#c8d8f0!important;color:#1e293b!important}
+  .conclusion-card .veredicto-principal{color:#1e293b!important}
+  .conclusion-puntos li{color:#1e293b!important}
+  .bloque-card{background:#f8faff!important;border-color:#c8d8f0!important}
+  .bloque-contenido{color:#334155!important}
+  thead th{background:#1A56C4!important;color:#fff!important}
+  tbody td{color:#1e293b!important}
+  tbody td:first-child{background:#f8faff!important;color:#1e293b!important}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/" class="back-btn">← Inicio</a>
+  <div class="topbar-title">Empresas Infravaloradas</div>
+  <div class="topbar-tag">PROTOCOLO TRIMESTRAL · IA</div>
+  <div class="topbar-actions" id="topActions" style="display:none">
+    <button onclick="openHist()">📋 Historial</button>
+    <button onclick="saveAnalisis()">💾 Guardar</button>
+    <button onclick="verPDF()">📄 Ver PDF</button>
+    <button class="btn-pdf-top" onclick="exportPDF()">⬇ Descargar PDF</button>
+  </div>
+  <div class="topbar-actions" id="topActionsInit">
+    <button onclick="openHist()">📋 Historial</button>
+  </div>
+</header>
+
+<!-- HISTORIAL PANEL -->
+<div id="hist-overlay" onclick="closeHist()"></div>
+<div id="hist-panel">
+  <div class="hist-header">
+    <span>📋 Historial — Infravaloradas</span>
+    <button class="hist-close" onclick="closeHist()">✕</button>
+  </div>
+  <div id="hist-list"></div>
+</div>
+<div id="toast"></div>
+
+<div class="wrap">
+
+  <!-- SEARCH -->
+  <div class="search-area" id="searchArea">
+    <h1>Protocolo Empresas <span>Infravaloradas</span></h1>
+    <p>Ingresá el ticker y la IA investiga 17 ratios × 12 trimestres con datos reales.<br>
+    Veredicto + tabla maestra + lectura profesional por bloques.</p>
+    <div class="search-row">
+      <input id="inp" type="text" placeholder="Ticker (ej: ORCL, AAPL, MSFT)" autocomplete="off" spellcheck="false" maxlength="6"/>
+      <button id="btn" onclick="run()">ANALIZAR →</button>
+    </div>
+    <div id="errMsg"></div>
+    <div class="input-hint">Solo tickers de NYSE / NASDAQ. El análisis puede tardar 30–60 segundos.</div>
+  </div>
+
+  <!-- SPINNER -->
+  <div id="spinner">
+    <div class="spin"></div>
+    <div class="spin-msg" id="spinMsg">Investigando <strong id="spinTicker"></strong>...</div>
+    <div class="spin-sub">La IA está buscando datos financieros reales en múltiples fuentes</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="resultsSection">
+    <div id="conclusionArea"></div>
+    <div id="tablaArea"></div>
+    <div id="lecturaArea"></div>
+    <div style="text-align:center;padding:20px 0">
+      <button class="btn-nuevo" onclick="nuevoAnalisis()">🔄 NUEVO ANÁLISIS</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="infravaloradas-config.js"></script>
+<script src="infravaloradas-api.js"></script>
+<script src="infravaloradas-main.js"></script>
+</body>
+</html>

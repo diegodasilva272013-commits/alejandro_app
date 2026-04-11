@@ -3080,5 +3080,243 @@ Consenso de analistas (Buy/Hold/Sell), precio objetivo promedio, principales cas
   }
 });
 
+// ═════════════════════════════════════════════════════════════════════════════
+// MÓDULO PROTOCOLO EMPRESAS INFRAVALORADAS TRIMESTRAL — Claude + web_search
+// ═════════════════════════════════════════════════════════════════════════════
+
+const _infraCache = new Map();
+
+app.post('/api/infravaloradas/analizar', requireAuth, iaLimiter, async (req, res) => {
+  const { ticker } = req.body || {};
+  if (!ticker) return res.status(400).json({ error: 'ticker requerido' });
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY no configurada.' });
+
+  const cleanTicker = ticker.toUpperCase().trim().slice(0, 6);
+  const cacheKey = `${cleanTicker}_${new Date().toISOString().slice(0, 10)}`;
+  const cached = _infraCache.get(cacheKey);
+  if (cached) return res.json(cached);
+
+  const systemPrompt = `Sos un analista financiero institucional de primer nivel.
+Tu tarea es aplicar el "Protocolo Empresas Infravaloradas Trimestral"
+para la empresa con ticker: ${cleanTicker}.
+
+INSTRUCCIONES:
+1. Usá web_search para buscar datos financieros reales y actualizados
+   de los últimos 12 trimestres de la empresa.
+2. Buscá en fuentes confiables: SEC EDGAR, Yahoo Finance, Macrotrends,
+   Stockanalysis.com, reportes de earnings oficiales, investor relations.
+3. NUNCA inventar datos. Si un dato no está disponible, marcarlo como "N/D".
+4. Respondé ÚNICAMENTE con un objeto JSON válido con la estructura indicada.
+5. No agregues texto fuera del JSON. No uses markdown. Solo el JSON puro.
+
+ESTRUCTURA DE RESPUESTA JSON REQUERIDA:
+{
+  "ticker": "${cleanTicker}",
+  "empresa": "NOMBRE COMPLETO DE LA EMPRESA",
+  "fecha_analisis": "${new Date().toISOString().slice(0, 10)}",
+  "sector": "Sector / Industria",
+
+  "conclusion_rapida": {
+    "veredicto": "verde|amarillo|rojo",
+    "titulo": "Frase clara del veredicto profesional",
+    "subtitulo": "matiz importante si aplica (o null)",
+    "puntos": [
+      { "color": "verde|amarillo|rojo", "texto": "Punto de análisis" }
+    ],
+    "frase_cierre": "Conclusión en una frase clara",
+    "aclaracion": "Aclaración adicional si aplica (o null)"
+  },
+
+  "tabla_maestra": {
+    "trimestres": ["Q-12","Q-11","Q-10","Q-9","Q-8","Q-7","Q-6","Q-5","Q-4","Q-3","Q-2","Q-1"],
+    "nota_metodologica": "Nota sobre la fuente de los datos y metodología usada",
+    "fuentes_usadas": ["fuente1", "fuente2"],
+    "ratios": [
+      {
+        "id": "ingresos_totales",
+        "nombre": "Ingresos Totales (B)",
+        "valores": [
+          { "trimestre": "Q-12", "valor": 12.94, "color": "verde|amarillo|rojo" },
+          { "trimestre": "Q-11", "valor": 13.28, "color": "verde|amarillo|rojo" }
+        ]
+      }
+    ]
+  },
+
+  "lectura_profesional": {
+    "intro": "Introducción al análisis profesional",
+    "bloques": [
+      {
+        "numero": 1,
+        "icono": "🔥",
+        "titulo": "BLOQUE DE CRECIMIENTO",
+        "color_bloque": "verde|amarillo|rojo",
+        "contenido": "Texto profesional de 3-5 párrafos",
+        "highlight": "Frase destacada o null"
+      },
+      {
+        "numero": 2,
+        "icono": "🔥",
+        "titulo": "BLOQUE DE CALIDAD DEL NEGOCIO",
+        "color_bloque": "verde|amarillo|rojo",
+        "contenido": "Análisis del margen bruto, moat, pricing power",
+        "highlight": "Frase destacada o null"
+      },
+      {
+        "numero": 3,
+        "icono": "🔥",
+        "titulo": "BLOQUE DE CAJA / FCF",
+        "color_bloque": "verde|amarillo|rojo",
+        "contenido": "Análisis del FCF, razones, si es estructural o temporal",
+        "highlight": null
+      },
+      {
+        "numero": 4,
+        "icono": "🔥",
+        "titulo": "BLOQUE DE DEUDA",
+        "color_bloque": "verde|amarillo|rojo",
+        "contenido": "Análisis de la estructura de deuda, riesgo, capacidad de repago",
+        "highlight": null
+      },
+      {
+        "numero": 5,
+        "icono": "🔥",
+        "titulo": "BLOQUE DE VALUACIÓN",
+        "color_bloque": "verde|amarillo|rojo",
+        "contenido": "Análisis del PER, PEG, si la valuación actual es atractiva o exigente",
+        "highlight": null
+      },
+      {
+        "numero": 6,
+        "icono": "🎯",
+        "titulo": "CONCLUSIÓN FINAL",
+        "color_bloque": "verde|amarillo|rojo",
+        "contenido": "Veredicto final integrado cruzando crecimiento + rentabilidad + caja + deuda + valuación.",
+        "highlight": null
+      }
+    ]
+  }
+}
+
+Los 17 ratios que DEBES incluir en tabla_maestra.ratios son:
+1. Ingresos Totales (B) — en miles de millones USD
+2. Utilidad Bruta (B)
+3. Ganancia Neta (B)
+4. Margen Bruto (%) — porcentaje
+5. Flujo de Caja Libre — FCF (B)
+6. Margen FCF (%)
+7. PER — múltiplo precio/ganancia
+8. PEG — Price/Earnings to Growth
+9. Equity / Capital Contable (B)
+10. Deuda / Patrimonio — ratio
+11. Deuda Neta / EBITDA — ratio
+12. Deuda Neta (B)
+13. Deuda Total (B)
+14. CapEx (B)
+15. CROIC (%) — Cash Return on Invested Capital
+16. Gross Profit / Assets (%)
+17. Asset Turnover — ratio
+
+Cada ratio debe tener exactamente 12 valores (uno por trimestre, Q-12 es el más antiguo, Q-1 el más reciente).
+Cada valor debe tener: trimestre, valor (número o "N/D"), color ("verde", "amarillo" o "rojo").
+
+EVALUACIÓN DE COLORES POR RATIO:
+- Ingresos: verde si YoY > 10%, amarillo 0-10%, rojo < 0%
+- Utilidad Bruta: verde si creciente, amarillo plana, rojo cayendo
+- Ganancia Neta: verde si creciente, amarillo volátil, rojo cayendo
+- Margen Bruto: verde > 45%, amarillo 35-45%, rojo < 35%
+- FCF: verde si positivo y creciente, amarillo positivo irregular, rojo negativo
+- Margen FCF: verde > 10%, amarillo 5-10%, rojo < 5%
+- PER: verde < 20, amarillo 20-30, rojo > 30
+- PEG: verde < 1.5, amarillo 1.5-2.0, rojo > 2.0
+- Equity: verde si creciente, amarillo estable, rojo deteriorándose
+- Deuda/Patrimonio: verde < 0.8, amarillo 0.8-1.5, rojo > 1.5
+- Deuda Neta/EBITDA: verde < 1.5, amarillo 1.5-2.5, rojo > 2.5
+- Deuda Neta: verde si baja, amarillo estable, rojo sube
+- Deuda Total: verde controlada, amarillo moderada, rojo excesiva
+- CapEx: verde si productivo, amarillo alto pero razonable, rojo sin retorno
+- CROIC: verde > 10%, amarillo 5-10%, rojo < 5%
+- GP/Assets: verde > 35%, amarillo 20-35%, rojo < 20%
+- Asset Turnover: verde > 0.50, amarillo 0.30-0.50, rojo < 0.30
+
+Interpreta los umbrales considerando el sector de la empresa (ej: software tolera PER más alto).
+
+La lectura profesional debe ser detallada, con análisis real de los datos, mínimo 3 párrafos por bloque.
+Escribí TODO en español.`;
+
+  const userPrompt = `Ejecutá el Protocolo Empresas Infravaloradas Trimestral para: ${cleanTicker}
+
+Buscá datos financieros REALES de los últimos 12 trimestres. Usá web_search para cada dato.
+Respondé SOLO con el JSON, sin texto adicional.`;
+
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey });
+
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 16000,
+      tools: [
+        {
+          type: 'web_search_20250305',
+          name: 'web_search',
+          max_uses: 15
+        }
+      ],
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ]
+    });
+
+    // Extract the JSON from the response
+    const textBlocks = (response.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text);
+
+    let textoRespuesta = textBlocks.join('');
+
+    // Clean possible markdown backticks
+    textoRespuesta = textoRespuesta
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
+      .trim();
+
+    let resultado;
+    try {
+      resultado = JSON.parse(textoRespuesta);
+    } catch (parseErr) {
+      // Try to extract JSON object with regex
+      const match = textoRespuesta.match(/\{[\s\S]*\}/);
+      if (match) {
+        resultado = JSON.parse(match[0]);
+      } else {
+        console.error('[infravaloradas] No se pudo parsear JSON:', textoRespuesta.slice(0, 500));
+        throw new Error('La IA no devolvió un formato válido. Intentá de nuevo.');
+      }
+    }
+
+    // Validate essential fields
+    if (!resultado.ticker) resultado.ticker = cleanTicker;
+    if (!resultado.tabla_maestra || !resultado.tabla_maestra.ratios) {
+      throw new Error('Respuesta incompleta: falta la tabla maestra.');
+    }
+
+    _infraCache.set(cacheKey, resultado);
+    console.log(`[infravaloradas] OK: ${cleanTicker} — ${(resultado.tabla_maestra.ratios || []).length} ratios`);
+    res.json(resultado);
+
+  } catch (err) {
+    console.error('Error /api/infravaloradas/analizar:', err);
+    const msg = err.message || 'Error analizando la empresa.';
+    if (msg.includes('rate') || msg.includes('429')) {
+      return res.status(429).json({ error: 'Demasiadas solicitudes. Esperá unos segundos e intentá de nuevo.' });
+    }
+    res.status(500).json({ error: msg });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`));
