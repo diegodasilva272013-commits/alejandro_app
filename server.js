@@ -1697,7 +1697,7 @@ html,body{background:#05080F;color:#FFF;font-family:'Inter',sans-serif;font-size
 // Body: { empresa, archivo (base64 opcional), archivoNombre }
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/analisis/generar', iaLimiter, async (req, res) => {
-  const { empresa, archivo, archivoNombre } = req.body || {};
+  const { empresa, archivo, archivoNombre, metricas } = req.body || {};
 
   if (!empresa || !empresa.trim()) {
     return res.status(400).json({ error: 'El campo empresa es requerido.' });
@@ -1714,7 +1714,14 @@ app.post('/api/analisis/generar', iaLimiter, async (req, res) => {
 
   const systemPrompt = `Eres un analista financiero institucional de élite especializado en renta variable global. Analizas empresas públicas con rigor cuantitativo y cualitativo. Respondes SIEMPRE con un JSON válido perfectamente estructurado con todos los campos del esquema solicitado. No omites ningún campo. Si no tienes datos precisos, usas estimaciones razonables basadas en el sector y tamaño de la empresa.`;
 
-  const userPrompt = `Genera un análisis financiero institucional COMPLETO y DETALLADO de la empresa "${empresa.trim()}".${archivoNombre ? ` El usuario adjuntó contexto adicional en: ${archivoNombre}.` : ''}
+  // Construir bloque de métricas si el usuario las proporcionó
+  let metricasBlock = '';
+  if (metricas && typeof metricas === 'object' && Object.keys(metricas).length > 0) {
+    const lineas = Object.entries(metricas).map(([k, v]) => `  - ${k}: ${v}`).join('\n');
+    metricasBlock = `\n\nDATOS FINANCIEROS PROPORCIONADOS POR EL USUARIO (usar como fuente primaria — son datos reales copiados de una plataforma financiera):\n${lineas}\n\nIMPORTANTE: Estos datos son reales y recientes. Usalos como base para completar el análisis. Priorizá estos valores sobre estimaciones propias en todos los campos correspondientes del JSON de respuesta (scorecard, métricas de mercado, PnL, ratios, forense, etc.).`;
+  }
+
+  const userPrompt = `Genera un análisis financiero institucional COMPLETO y DETALLADO de la empresa "${empresa.trim()}".${archivoNombre ? ` El usuario adjuntó contexto adicional en: ${archivoNombre}.` : ''}${metricasBlock}
 
 INSTRUCCIONES CRÍTICAS:
 - Usa datos REALES y ACTUALIZADOS para "${empresa.trim()}" específicamente. NO uses datos de ejemplo ni placeholders.

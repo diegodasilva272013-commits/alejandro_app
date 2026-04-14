@@ -473,6 +473,13 @@ html, body {
         </div>
       </div>
 
+      <!-- Textarea para pegar métricas de InvestingPro / similares -->
+      <div style="margin-bottom:1rem">
+        <label class="inp-label" for="inp-metricas">Métricas financieras (opcional) — Pegá datos de InvestingPro, Yahoo Finance, etc.</label>
+        <textarea class="inp-field" id="inp-metricas" rows="5" placeholder="Pegá aquí las métricas copiadas de InvestingPro, ejemplo:&#10;Ingresos&#10;10.23 B&#10;Utilidad bruta&#10;3.715 B&#10;PER&#10;86.1x&#10;..." style="resize:vertical;min-height:80px;font-size:.82rem;line-height:1.5"></textarea>
+        <div id="metricas-preview" style="display:none;margin-top:.5rem;padding:.6rem .8rem;background:rgba(74,222,128,.06);border:1px solid rgba(74,222,128,.15);border-radius:6px;font-size:.72rem;color:rgba(255,255,255,.55);max-height:120px;overflow-y:auto"></div>
+      </div>
+
       <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
         <div class="uz-icon">📎</div>
         <p>Adjuntá datos adicionales (opcional) — PDF, Excel, CSV</p>
@@ -930,6 +937,74 @@ let _pdfPath  = null;
 let _datos    = null;
 let _empresa  = '';
 
+// ── Parser de métricas InvestingPro ───────────────────────────────────────
+function parseMetricas(raw) {
+  if (!raw || !raw.trim()) return null;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  // Eliminar encabezados conocidos
+  const skipHeaders = /^nombre\s+m[eé]trica|^m[eé]trica|^valor|^tendencia$/i;
+  const filtered = lines.filter(l => !skipHeaders.test(l));
+
+  // Patrón de valor: número con B/M/K, porcentaje, ratio x, o moneda
+  const isValue = s => /^[\-\+]?[\d.,]+\s*[BMKTbmkt%x]?x?$/.test(s.replace(/\s/g,''))
+    || /^\d[\d.,]*\s*%$/.test(s)
+    || /^\d[\d.,]*x$/i.test(s)
+    || /^[\-\+]?\$?[\d.,]+\s*[BMKTbmkt]?$/i.test(s);
+
+  const result = {};
+  let i = 0;
+  while (i < filtered.length) {
+    const line = filtered[i];
+    // Si la línea actual NO es un valor y la siguiente SÍ es un valor → par métrica+valor
+    if (!isValue(line) && i + 1 < filtered.length && isValue(filtered[i + 1])) {
+      result[line] = filtered[i + 1];
+      i += 2;
+    }
+    // Si la línea tiene tabulador → split por tab
+    else if (line.includes('\t')) {
+      const parts = line.split('\t').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        result[parts[0]] = parts.slice(1).join(' | ');
+      }
+      i++;
+    }
+    // Línea con ":" separador
+    else if (line.includes(':') && !line.startsWith('http')) {
+      const idx = line.indexOf(':');
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim();
+      if (key && val) result[key] = val;
+      i++;
+    }
+    else {
+      i++;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// Preview on paste / input
+(function() {
+  const ta = document.getElementById('inp-metricas');
+  const preview = document.getElementById('metricas-preview');
+  if (!ta || !preview) return;
+
+  function update() {
+    const parsed = parseMetricas(ta.value);
+    if (parsed) {
+      const entries = Object.entries(parsed);
+      preview.innerHTML = `<strong style="color:var(--green)">✓ ${entries.length} métricas detectadas:</strong><br>` +
+        entries.slice(0, 15).map(([k, v]) => `<span style="color:var(--gold)">${k}</span>: ${v}`).join('<br>') +
+        (entries.length > 15 ? `<br><em>…y ${entries.length - 15} más</em>` : '');
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+  ta.addEventListener('input', update);
+  ta.addEventListener('paste', () => setTimeout(update, 50));
+})();
+
 // ── Drag & drop archivo ───────────────────────────────────────────────────
 (function() {
   const zone  = document.getElementById('drop-zone');
@@ -1011,6 +1086,10 @@ async function iniciarAnalisis() {
     archivoNombre = file.name;
   }
 
+  // Leer métricas pegadas
+  const metricasRaw = document.getElementById('inp-metricas').value.trim();
+  const metricasParsed = parseMetricas(metricasRaw);
+
   // Pasar a pantalla de progreso
   document.getElementById('prog-empresa').textContent = empresa;
   document.getElementById('progress-error').style.display = 'none';
@@ -1026,7 +1105,7 @@ async function iniciarAnalisis() {
     const resp = await fetch('/api/analisis/generar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ empresa, archivo: archivoBase64, archivoNombre }),
+      body: JSON.stringify({ empresa, archivo: archivoBase64, archivoNombre, metricas: metricasParsed }),
       signal: AbortSignal.timeout(180000)
     });
 

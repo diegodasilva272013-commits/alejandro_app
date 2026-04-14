@@ -178,9 +178,144 @@ function techLoad12M(){
 // ══════════════════════════════════════════
 //  PARSER
 // ══════════════════════════════════════════
+
+// Mapa de nombres InvestingPro / plataformas en español → claves internas
+var INVESTINGPRO_MAP = {
+  // precios / mercado
+  'precio actual':           'PRECIO_ACTUAL',
+  'precio de cierre':        'PRECIO_ACTUAL',
+  'último precio':           'PRECIO_ACTUAL',
+  'precio':                  'PRECIO_ACTUAL',
+  'precio pivote':           'PRECIO_PIVOTE',
+  'máximo 52 semanas':       'PRECIO_MAX_52S',
+  'max 52 semanas':          'PRECIO_MAX_52S',
+  'máximo 52s':              'PRECIO_MAX_52S',
+  'mínimo 52 semanas':       'PRECIO_MIN_52S',
+  'min 52 semanas':          'PRECIO_MIN_52S',
+  'mínimo 52s':              'PRECIO_MIN_52S',
+  'acc. en circulación':     'FLOAT_ACC',
+  'acc en circulacion':      'FLOAT_ACC',
+  'acciones en circulación': 'FLOAT_ACC',
+
+  // rentabilidad
+  'rendimiento de capital':          'ROE',
+  'roe':                             'ROE',
+  'rendimiento del capital invertido':'ROIC',
+  'roic':                            'ROIC',
+  'rendimiento de activos':          'ROA',
+  'roa':                             'ROA',
+
+  // valoración
+  'per':                     'PER',
+  'ratio per':               'PER',
+  'relación per':            'PER',
+  'relación per (fwd)':      'PER_FWD',
+  'per forward':             'PER_FWD',
+  'ratio peg':               'PEG',
+  'peg':                     'PEG',
+  've / flujo de caja libre':'EV_FCF',
+  've/ebit':                 'EV_EBIT',
+  've/ebitda':               'EV_EBITDA',
+
+  // márgenes
+  'margen beneficio bruto':  'MARGEN_BRUTO',
+  'margen bruto':            'MARGEN_BRUTO',
+  'margen ebit':             'MARGEN_EBIT',
+  'margen ebitda':           'MARGEN_EBITDA',
+  'ingresos netos margen accionistas': 'MARGEN_NETO',
+  'margen neto':             'MARGEN_NETO',
+  'margen de flujo de caja libre sin apalancamiento': 'MARGEN_FCF_UNLEV',
+  'margen de flujo de caja libre apalancado': 'MARGEN_FCF_LEV',
+
+  // ingresos y resultados
+  'ingresos':                'INGRESOS',
+  'revenue':                 'INGRESOS',
+  'utilidad bruta':          'UTILIDAD_BRUTA',
+  'ganancias netas':         'GANANCIAS_NETAS',
+  'ebit':                    'EBIT',
+  'ebitda':                  'EBITDA',
+  'flujo de caja libre neto':'FCF',
+  'free cash flow':          'FCF',
+  'efectivo de las operaciones': 'OFC',
+
+  // balance / solvencia
+  'capital contable':        'PATRIMONIO',
+  'patrimonio':              'PATRIMONIO',
+  'deuda total':             'DEUDA_TOTAL',
+  'deuda a largo plazo':     'DEUDA_LP',
+  'deuda neta':              'DEUDA_NETA',
+  'deuda / patrimonio':      'DEUDA_PATRIMONIO',
+  'deuda neta / ebitda':     'DN_EBITDA',
+  'ratio de solvencia':      'CURRENT_RATIO',
+  'prueba ácida':            'QUICK_RATIO',
+  'prueba acida':            'QUICK_RATIO',
+  'ratio de cobertura de intereses': 'INTCOV',
+  'efectivo y equivalentes': 'CASH',
+  'capital total':           'CAPITAL_TOTAL',
+
+  // scoring
+  'fórmula altman z-score':  'ALTMAN',
+  'altman z-score':          'ALTMAN',
+  'puntuación piotroski':    'PIOTROSKI',
+  'piotroski':               'PIOTROSKI',
+  'fórmula beneish m-score': 'BENEISH',
+  'beneish m-score':         'BENEISH',
+
+  // otros
+  'wacc':                    'WACC',
+  'valor de la empresa (ve)':'EV',
+  'valor de la empresa':     'EV',
+  'gastos de capital':       'CAPEX',
+  'depreciación y amortización': 'DA',
+  'rotación de activos':     'ASSET_TURNOVER',
+  'rendimiento de flujo de caja libre': 'FCF_YIELD',
+  'rsi':                     'RSI_14',
+  'rsi 14':                  'RSI_14',
+  'sector':                  'SECTOR',
+  'beneficio bruto / activos totales': 'GP_ASSETS',
+  'propiedad, planta y equipo brutos': 'PPE',
+  'efectivo neto (ben graham)':        'NET_CASH_GRAHAM',
+  'crecimiento básico del bpa':        'EPS_CREC_ANUAL',
+  'previsiones de bpa (investingpro)': 'EPS_FWD',
+  'previsión de ingresos (investingpro)': 'REV_FWD',
+  'margen de intereses minoritarios de los resultados': 'MIN_INT_MARGIN',
+  'margen de gastos de capital':       'CAPEX_MARGIN',
+};
+
+// Detecta si una cadena parece un valor numérico (con sufijos B/M/K/%, x, etc.)
+function _looksLikeValue(s) {
+  if (!s) return false;
+  // Eliminar paréntesis
+  s = s.replace(/[()]/g, '').trim();
+  return /^[\-\+]?[\d.,]+\s*[BMKTbmkt%]?x?$/i.test(s)
+    || /^[\-\+]?\$?\s*[\d.,]+\s*[BMKTbmkt]?$/i.test(s)
+    || /^[\d.,]+\s*x$/i.test(s);
+}
+
+// Normaliza valor con sufijos B/M/K a número
+function _normalizeInvestingValue(s) {
+  if (!s) return s;
+  s = s.trim();
+  // Quitar trailing 'x' para ratios — mantener como número
+  var isRatio = /x$/i.test(s);
+  var isPct   = /%$/.test(s);
+  var clean   = s.replace(/[x%$]/gi, '').replace(/\s/g, '').replace(/,/g, '');
+  var num     = parseFloat(clean);
+  if (isNaN(num)) return s;
+  // Convertir sufijos de magnitud
+  if (/B$/i.test(s.replace(/[x%]/gi,'')))      num = num * 1000;  // B→ miles de M
+  else if (/T$/i.test(s.replace(/[x%]/gi,''))) num = num * 1000000;
+  else if (/K$/i.test(s.replace(/[x%]/gi,''))) num = num / 1000;
+  else if (/M$/i.test(s.replace(/[x%]/gi,''))) { /* ya en M, OK */ }
+  return num;
+}
+
 function parseTechData(raw){
   var d = {};
   var lines = raw.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l && !l.startsWith('#'); });
+
+  // Primero intentar formato clásico CLAVE: valor
+  var foundClassic = false;
   for(var i=0; i<lines.length; i++){
     var line = lines[i];
     var idx  = line.indexOf(':');
@@ -188,10 +323,46 @@ function parseTechData(raw){
     var key = line.slice(0, idx).trim().toUpperCase().replace(/[^A-Z0-9_]/g,'_');
     var val = line.slice(idx+1).trim().replace(/\/\/.*$/, '').trim();
     if(val === '') continue;
+    foundClassic = true;
     var n = parseFloat(val);
     if(!isNaN(n) && val.indexOf(',') === -1) d[key] = n;
     else d[key] = val;
   }
+
+  // Si no se encontraron datos en formato clásico o falta PRECIO_ACTUAL,
+  // intentar formato InvestingPro (nombre en una línea, valor en la siguiente)
+  if (!d['PRECIO_ACTUAL'] && !d['PRECIO_PIVOTE']) {
+    var skipHeaders = /^nombre\s+m[eé]trica|^m[eé]trica|^valor|^tendencia$/i;
+    var filtered = lines.filter(function(l) { return !skipHeaders.test(l); });
+
+    for (var j = 0; j < filtered.length; j++) {
+      var metricName = filtered[j];
+
+      // Saltar si la línea parece un valor
+      if (_looksLikeValue(metricName)) continue;
+
+      // Si la siguiente línea es un valor, tenemos un par
+      if (j + 1 < filtered.length && _looksLikeValue(filtered[j + 1])) {
+        var rawVal = filtered[j + 1];
+        var lookupKey = metricName.toLowerCase().trim()
+          .replace(/\u00a0/g, ' ')   // nbsp
+          .replace(/\s+/g, ' ');
+        var mappedKey = INVESTINGPRO_MAP[lookupKey];
+        if (mappedKey) {
+          var nVal = _normalizeInvestingValue(rawVal);
+          d[mappedKey] = nVal;
+        }
+        // También guardar con clave genérica para el prompt de IA
+        var genericKey = metricName.toUpperCase().replace(/[^A-Z0-9_ÁÉÍÓÚÑ]/g, '_').replace(/_+/g, '_');
+        if (!d[genericKey]) {
+          var nv2 = _normalizeInvestingValue(rawVal);
+          d[genericKey] = nv2;
+        }
+        j++; // saltar la línea del valor
+      }
+    }
+  }
+
   return d;
 }
 
@@ -1461,8 +1632,11 @@ function parseTechAndRender(){
   catch(e){ errBox.textContent='Error al leer los datos: '+e.message; errBox.style.display='block'; return; }
 
   if(!d['PRECIO_ACTUAL'] && !d['PRECIO_PIVOTE']){
-    errBox.textContent='No se encontró PRECIO_ACTUAL. Verificá el formato.';
-    errBox.style.display='block'; return;
+    // Si hay al menos 3 métricas parseadas, no bloquear — el usuario pegó datos fundamentales
+    if (Object.keys(d).length < 3) {
+      errBox.textContent='No se encontró PRECIO_ACTUAL ni suficientes datos. Verificá el formato.';
+      errBox.style.display='block'; return;
+    }
   }
 
   if(!d['PERIODO']){ d['PERIODO'] = getTechPeriodo() || 'Análisis'; }
