@@ -368,11 +368,13 @@ function parseTechData(raw){
 
 function tNum(d, key, def){ var v=d[key]; return typeof v==='number'?v:(def!==undefined?def:null); }
 function tStr(d, key, def){ var v=d[key]; return typeof v==='string'?v.toLowerCase():(def||''); }
-function fmtP(v){ return v!==null?v.toFixed(2):'N/E'; }
-function fmtMoney(v){ return v!==null?'$'+v.toFixed(2):'N/E'; }
-function fmtPct(v){ return v!==null?v.toFixed(1)+'%':'N/E'; }
-function fmtX(v){ return v!==null?v.toFixed(2)+'x':'N/E'; }
-function fmtN2(v,d){ return v!==null?v.toLocaleString('es',{minimumFractionDigits:d||0,maximumFractionDigits:d||0}):'N/E'; }
+function fmtP(v){ return v!==null&&v!==undefined?v.toFixed(2):'N/E'; }
+function fmtMoney(v){ return v!==null&&v!==undefined?'$'+v.toFixed(2):'N/E'; }
+function fmtPct(v){ return v!==null&&v!==undefined?v.toFixed(1)+'%':'N/E'; }
+function fmtX(v){ return v!==null&&v!==undefined?v.toFixed(2)+'x':'N/E'; }
+function fmtN2(v,d){ return v!==null&&v!==undefined?v.toLocaleString('es',{minimumFractionDigits:d||0,maximumFractionDigits:d||0}):'N/E'; }
+// Safe toFixed — nunca falla con null/undefined
+function _tf(v, decimals){ return (v!==null&&v!==undefined&&!isNaN(v)) ? v.toFixed(decimals!==undefined?decimals:2) : 'N/E'; }
 
 // ══════════════════════════════════════════
 //  MOTOR DE CÁLCULO — 4 METODOLOGÍAS
@@ -609,9 +611,9 @@ function calcTech(d){
     if(enZonaEntry) score++;
 
     // Punto de entrada VCP: precio del pivote
-    var entry = pivote || precio;
-    var stopV = minPat || (stopLoss || (entry * 0.96));
-    var riesgoV = ((entry-stopV)/entry)*100;
+    var entry = pivote || precio || 0;
+    var stopV = minPat || (stopLoss || (entry ? entry * 0.96 : 0));
+    var riesgoV = entry ? ((entry-stopV)/entry)*100 : 0;
 
     var total = 5;
     var signal = score >= 4 ? '🟢' : score >= 2 ? '🟡' : '🔴';
@@ -658,9 +660,9 @@ function calcTech(d){
       detalle: volRatio!==null ? (volRatio*100).toFixed(0)+'%' : 'N/E' });
     if(volOk) score++;
 
-    var entry  = pivote || precio;
-    var stopK  = stopLoss || ma20 || (entry * 0.97);
-    var riesgoK= ((entry-stopK)/entry)*100;
+    var entry  = pivote || precio || 0;
+    var stopK  = stopLoss || ma20 || (entry ? entry * 0.97 : 0);
+    var riesgoK= entry ? ((entry-stopK)/entry)*100 : 0;
 
     var total  = 6;
     var signal = score >= 5 ? '🟢' : score >= 3 ? '🟡' : '🔴';
@@ -712,9 +714,9 @@ function calcTech(d){
       detalle: volRatio!==null ? (volRatio*100).toFixed(0)+'%' : 'N/E' });
     if(volOk) score++;
 
-    var entry = dTecho || pivote || precio;
-    var stopD = dPiso || stopLoss || (entry * 0.93);
-    var riesgoD = ((entry-stopD)/entry)*100;
+    var entry = dTecho || pivote || precio || 0;
+    var stopD = dPiso || stopLoss || (entry ? entry * 0.93 : 0);
+    var riesgoD = entry ? ((entry-stopD)/entry)*100 : 0;
 
     var total  = 6;
     var signal = score >= 5 ? '🟢' : score >= 3 ? '🟡' : '🔴';
@@ -764,9 +766,9 @@ function calcTech(d){
       detalle: volRatio!==null ? (volRatio*100).toFixed(0)+'%' : 'N/E' });
     if(volOk) score++;
 
-    var entry = pivote || precio;
-    var stopO = stopLoss || (ma50 ? ma50 : entry*0.92);
-    var riesgoO = ((entry-stopO)/entry)*100;
+    var entry = pivote || precio || 0;
+    var stopO = stopLoss || (ma50 ? ma50 : (entry ? entry*0.92 : 0));
+    var riesgoO = entry ? ((entry-stopO)/entry)*100 : 0;
 
     var total  = 6;
     var signal = score >= 5 ? '🟢' : score >= 3 ? '🟡' : '🔴';
@@ -788,12 +790,13 @@ function calcTech(d){
   // Mejor entry: promedio ponderado de entradas de métodos verdes/amarillos
   var activeMethods = methods.filter(function(m){ return m.signal !== '🔴'; });
   var bestEntry = activeMethods.length > 0
-    ? activeMethods.reduce(function(s,m){ return s+m.entry; },0)/activeMethods.length
-    : (pivote||precio);
-  bestEntry = bestEntry || precio;
+    ? activeMethods.reduce(function(s,m){ return s+(m.entry||0); },0)/activeMethods.length
+    : (pivote||precio||0);
+  bestEntry = bestEntry || precio || 0;
 
-  var bestStop     = stopLoss || Math.min.apply(null, activeMethods.map(function(m){ return m.stop; }).concat([(precio||0)*0.93]));
-  var riesgoFinal  = ((bestEntry-bestStop)/bestEntry)*100;
+  var stopVals = activeMethods.map(function(m){ return m.stop; }).filter(function(v){ return v && v > 0; });
+  var bestStop = stopLoss || (stopVals.length ? Math.min.apply(null, stopVals) : ((precio||0)*0.93));
+  var riesgoFinal  = bestEntry ? ((bestEntry-bestStop)/bestEntry)*100 : 0;
   var reward1Final = obj1 ? ((obj1-bestEntry)/bestEntry)*100 : null;
   var reward2Final = obj2 ? ((obj2-bestEntry)/bestEntry)*100 : null;
   var rr1Final     = (reward1Final&&riesgoFinal) ? reward1Final/riesgoFinal : null;
@@ -1182,9 +1185,9 @@ function renderTechDash(c){
       +'<div class="tc-card-method">'+m.corto+'</div>'
       +'<div class="tc-card-signal">'+m.signal+'</div>'
       +'<div class="tc-card-name">'+m.nombre+'</div>'
-      +'<div class="tc-card-entry">Entry: $'+m.entry.toFixed(2)+'</div>'
-      +'<div class="tc-card-stop">Stop: $'+m.stop.toFixed(2)+' · Riesgo: '+m.riesgo_pct.toFixed(1)+'%</div>'
-      +(rrPct!==null?'<div class="tc-card-rr '+rrCls+'">R:R 1:'+(rrPct.toFixed(1))+'</div>':'')
+      +'<div class="tc-card-entry">Entry: $'+_tf(m.entry)+'</div>'
+      +'<div class="tc-card-stop">Stop: $'+_tf(m.stop)+' · Riesgo: '+_tf(m.riesgo_pct,1)+'%</div>'
+      +(rrPct!==null?'<div class="tc-card-rr '+rrCls+'">R:R 1:'+(_tf(rrPct,1))+'</div>':'')
       +'<div style="font-size:10px;color:var(--gray2);margin-top:6px">'+m.score+' / '+m.total+' condiciones ✓</div>'
       +'</div>';
   }
@@ -1259,10 +1262,10 @@ function renderTechDash(c){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">'
     +'  <div>'
     +'    <div class="price-levels">'
-    +(c.bestEntry?'<div class="pl-card"><div class="pl-card-lbl">Punto de Entry (Confluencia)</div><div class="pl-card-val entry">$'+c.bestEntry.toFixed(2)+'</div><div class="pl-card-note">Promedio ponderado de métodos activos</div></div>':'')
-    +(c.bestStop?'<div class="pl-card"><div class="pl-card-lbl">Stop Loss</div><div class="pl-card-val stop">$'+c.bestStop.toFixed(2)+'</div><div class="pl-card-note">Riesgo: '+(c.riesgoFinal?c.riesgoFinal.toFixed(1)+'%':'N/E')+'</div></div>':'')
-    +(c.obj1?'<div class="pl-card"><div class="pl-card-lbl">Objetivo 1</div><div class="pl-card-val obj1">$'+c.obj1.toFixed(2)+'</div><div class="pl-card-note">+'+(c.reward1Final?c.reward1Final.toFixed(1)+'%':'N/E')+' · R:R '+(c.rr1Final?'1:'+c.rr1Final.toFixed(1):'N/E')+'</div></div>':'')
-    +(c.obj2?'<div class="pl-card"><div class="pl-card-lbl">Objetivo 2</div><div class="pl-card-val obj2">$'+c.obj2.toFixed(2)+'</div><div class="pl-card-note">+'+(c.reward2Final?c.reward2Final.toFixed(1)+'%':'N/E')+' · R:R '+(c.rr2Final?'1:'+c.rr2Final.toFixed(1):'N/E')+'</div></div>':'')
+    +(c.bestEntry?'<div class="pl-card"><div class="pl-card-lbl">Punto de Entry (Confluencia)</div><div class="pl-card-val entry">$'+_tf(c.bestEntry)+'</div><div class="pl-card-note">Promedio ponderado de métodos activos</div></div>':'')
+    +(c.bestStop?'<div class="pl-card"><div class="pl-card-lbl">Stop Loss</div><div class="pl-card-val stop">$'+_tf(c.bestStop)+'</div><div class="pl-card-note">Riesgo: '+(c.riesgoFinal?_tf(c.riesgoFinal,1)+'%':'N/E')+'</div></div>':'')
+    +(c.obj1?'<div class="pl-card"><div class="pl-card-lbl">Objetivo 1</div><div class="pl-card-val obj1">$'+_tf(c.obj1)+'</div><div class="pl-card-note">+'+(c.reward1Final?_tf(c.reward1Final,1)+'%':'N/E')+' · R:R '+(c.rr1Final?'1:'+_tf(c.rr1Final,1):'N/E')+'</div></div>':'')
+    +(c.obj2?'<div class="pl-card"><div class="pl-card-lbl">Objetivo 2</div><div class="pl-card-val obj2">$'+_tf(c.obj2)+'</div><div class="pl-card-note">+'+(c.reward2Final?_tf(c.reward2Final,1)+'%':'N/E')+' · R:R '+(c.rr2Final?'1:'+_tf(c.rr2Final,1):'N/E')+'</div></div>':'')
     +'    </div>'
     +'    <div class="tech-chart-box" style="margin-top:0">'
     +'      <div class="tech-chart-title">Distribución Riesgo / Recompensa</div>'
@@ -1278,11 +1281,11 @@ function renderTechDash(c){
     +'<div style="overflow-x:auto"><table class="tech-table">'
     +'<thead><tr><th>Nivel</th><th>Precio</th><th>% vs Actual</th><th>Tipo</th></tr></thead>'
     +'<tbody>'
-    +(c.obj2?'<tr><td style="color:#4ade80;font-weight:700">Objetivo 2</td><td class="mono">$'+c.obj2.toFixed(2)+'</td><td class="g">+'+(c.reward2Final?c.reward2Final.toFixed(1)+'%':'N/E')+'</td><td>Meta ampliada</td></tr>':'')
-    +(c.obj1?'<tr><td style="color:#22c55e;font-weight:700">Objetivo 1</td><td class="mono">$'+c.obj1.toFixed(2)+'</td><td class="g">+'+(c.reward1Final?c.reward1Final.toFixed(1)+'%':'N/E')+'</td><td>Meta principal</td></tr>':'')
-    +(c.pivote?'<tr><td style="color:#F2CC6E;font-weight:700">Pivote / Entry</td><td class="mono">$'+c.pivote.toFixed(2)+'</td><td class="a">'+(c.pctDePivote!==null?(c.pctDePivote>0?'-':'')+c.pctDePivote.toFixed(1)+'%':'N/E')+'</td><td>Punto de breakout</td></tr>':'')
-    +'<tr style="background:rgba(90,155,255,.06)"><td style="color:#5A9BFF;font-weight:700">Precio Actual</td><td class="mono">$'+c.precio.toFixed(2)+'</td><td>—</td><td>Cotización actual</td></tr>'
-    +(c.bestStop?'<tr><td style="color:#ef4444;font-weight:700">Stop Loss</td><td class="mono">$'+c.bestStop.toFixed(2)+'</td><td class="r">-'+(c.riesgoFinal?c.riesgoFinal.toFixed(1)+'%':'N/E')+'</td><td>Salida si falla el patrón</td></tr>':'')
+    +(c.obj2?'<tr><td style="color:#4ade80;font-weight:700">Objetivo 2</td><td class="mono">$'+_tf(c.obj2)+'</td><td class="g">+'+(c.reward2Final?_tf(c.reward2Final,1)+'%':'N/E')+'</td><td>Meta ampliada</td></tr>':'')
+    +(c.obj1?'<tr><td style="color:#22c55e;font-weight:700">Objetivo 1</td><td class="mono">$'+_tf(c.obj1)+'</td><td class="g">+'+(c.reward1Final?_tf(c.reward1Final,1)+'%':'N/E')+'</td><td>Meta principal</td></tr>':'')
+    +(c.pivote?'<tr><td style="color:#F2CC6E;font-weight:700">Pivote / Entry</td><td class="mono">$'+_tf(c.pivote)+'</td><td class="a">'+(c.pctDePivote!==null?(c.pctDePivote>0?'-':'')+_tf(c.pctDePivote,1)+'%':'N/E')+'</td><td>Punto de breakout</td></tr>':'')
+    +'<tr style="background:rgba(90,155,255,.06)"><td style="color:#5A9BFF;font-weight:700">Precio Actual</td><td class="mono">'+fmtMoney(c.precio)+'</td><td>—</td><td>Cotización actual</td></tr>'
+    +(c.bestStop?'<tr><td style="color:#ef4444;font-weight:700">Stop Loss</td><td class="mono">$'+_tf(c.bestStop)+'</td><td class="r">-'+(c.riesgoFinal?_tf(c.riesgoFinal,1)+'%':'N/E')+'</td><td>Salida si falla el patrón</td></tr>':'')
     +'</tbody></table></div>'
     +'</div>';
 
@@ -1293,10 +1296,10 @@ function renderTechDash(c){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">'
     +'  <div>'
     +'    <div class="tkg">';
-  if(c.ma10 )  html += '<div class="tkc"><div class="tkc-val">$'+c.ma10.toFixed(2)+'</div><div class="tkc-name">MA 10 días</div><div class="tkc-note">'+(c.precio>c.ma10?'✅ Precio sobre MA10':'❌ Bajo MA10')+'</div></div>';
-  if(c.ma20 )  html += '<div class="tkc"><div class="tkc-val">$'+c.ma20.toFixed(2)+'</div><div class="tkc-name">MA 20 días</div><div class="tkc-note">'+(c.precio>c.ma20?'✅ Precio sobre MA20':'❌ Bajo MA20')+'</div></div>';
-  if(c.ma50 )  html += '<div class="tkc"><div class="tkc-val">$'+c.ma50.toFixed(2)+'</div><div class="tkc-name">MA 50 días</div><div class="tkc-note">'+(c.precio>c.ma50?'✅ Precio sobre MA50':'❌ Bajo MA50')+'</div></div>';
-  if(c.ma200)  html += '<div class="tkc"><div class="tkc-val">$'+c.ma200.toFixed(2)+'</div><div class="tkc-name">MA 200 días</div><div class="tkc-note">'+(c.precio>c.ma200?'✅ Precio sobre MA200':'❌ Bajo MA200')+'</div></div>';
+  if(c.ma10 )  html += '<div class="tkc"><div class="tkc-val">$'+_tf(c.ma10)+'</div><div class="tkc-name">MA 10 días</div><div class="tkc-note">'+(c.precio&&c.precio>c.ma10?'✅ Precio sobre MA10':'❌ Bajo MA10')+'</div></div>';
+  if(c.ma20 )  html += '<div class="tkc"><div class="tkc-val">$'+_tf(c.ma20)+'</div><div class="tkc-name">MA 20 días</div><div class="tkc-note">'+(c.precio&&c.precio>c.ma20?'✅ Precio sobre MA20':'❌ Bajo MA20')+'</div></div>';
+  if(c.ma50 )  html += '<div class="tkc"><div class="tkc-val">$'+_tf(c.ma50)+'</div><div class="tkc-name">MA 50 días</div><div class="tkc-note">'+(c.precio&&c.precio>c.ma50?'✅ Precio sobre MA50':'❌ Bajo MA50')+'</div></div>';
+  if(c.ma200)  html += '<div class="tkc"><div class="tkc-val">$'+_tf(c.ma200)+'</div><div class="tkc-name">MA 200 días</div><div class="tkc-note">'+(c.precio&&c.precio>c.ma200?'✅ Precio sobre MA200':'❌ Bajo MA200')+'</div></div>';
   html += '    </div>'
     +'    <!-- Señales MA -->'
     +'    <div>'
